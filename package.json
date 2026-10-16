@@ -1,0 +1,30 @@
+{
+  "name": "erp-gestor-base",
+  "version": "1.0.0",
+  "description": "Template Base White-Label do ERP Gestor Pro - Clientes, Vendas, Estoque e Central Fiscal",
+  "main": "scripts/servidor_web.js",
+  "type": "module",
+  "scripts": {
+    "web": "node scripts/servidor_web.js",
+    "init:banco": "node scripts/init_banco_zerado.js",
+    "migrar:turso": "node scripts/migrar_turso.js"
+  },
+  "keywords": [
+    "erp",
+    "white-label",
+    "gestao",
+    "clientes",
+    "estoque",
+    "fiscal",
+    "sqlite",
+    "turso"
+  ],
+  "author": "Gustavo Rosa Informática",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
+    "@libsql/client": "^0.18.0",
+    "dotenv": "^18.0.8"
+  }
+}
