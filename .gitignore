@@ -20,6 +20,9 @@ npm-debug.log*
 yarn-debug.log*
 .vercel
 
+# Cache estático gerado do banco de dados
+public/dados_clientes.js
+
 # Dados brutos de importação e planilhas de clientes específicos
 database/*.csv
 database/*.json
