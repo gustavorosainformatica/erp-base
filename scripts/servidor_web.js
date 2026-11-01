@@ -27,6 +27,14 @@ const DB_PATH = path.join(DB_DIR, 'clientes.db');
 // Import dinâmico: a variável precisa existir ANTES de lib/db.js ser carregado.
 process.env.FORCAR_SQLITE_LOCAL = process.env.FORCAR_SQLITE_LOCAL || '1';
 const { default: handlerAnexos } = await import('../api/anexos.js');
+const { default: handlerPedidos } = await import('../api/pedidos.js');
+const { default: handlerAuth } = await import('../api/auth.js');
+const { default: handlerUsuarios } = await import('../api/usuarios.js');
+const { default: handlerProdutos } = await import('../api/produtos.js');
+const { default: handlerFinanceiro } = await import('../api/financeiro.js');
+const { default: handlerCompras } = await import('../api/compras.js');
+const { default: handlerConfiguracoes } = await import('../api/configuracoes.js');
+const { default: handlerNfe } = await import('../api/nfe.js');
 
 // Campos editáveis do cadastro de clientes
 const CAMPOS_CLIENTE = [
@@ -121,6 +129,27 @@ try {
       CREATE INDEX IF NOT EXISTS idx_produtos_categoria ON produtos (categoria);
       CREATE INDEX IF NOT EXISTS idx_produtos_sku ON produtos (codigo_sku);
       CREATE INDEX IF NOT EXISTS idx_produtos_nome ON produtos (nome);
+
+      CREATE TABLE IF NOT EXISTS pedidos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        numero TEXT NOT NULL UNIQUE,
+        cliente_id INTEGER,
+        cliente_nome TEXT NOT NULL,
+        cidade TEXT,
+        uf TEXT,
+        telefone TEXT,
+        itens TEXT NOT NULL,
+        valor_total REAL NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'AGUARDANDO_ENVIO',
+        status_texto TEXT NOT NULL DEFAULT 'Aguardando Envio',
+        codigo_rastreio TEXT,
+        observacoes TEXT,
+        data_pedido TEXT NOT NULL,
+        data_atualizacao TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_id ON pedidos (cliente_id);
+      CREATE INDEX IF NOT EXISTS idx_pedidos_status ON pedidos (status);
+      CREATE INDEX IF NOT EXISTS idx_pedidos_numero ON pedidos (numero);
     `);
   }
 } catch (err) {
@@ -256,6 +285,23 @@ async function tratarRequisicao(req, res) {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     });
     return res.end();
+  }
+
+  // Delegação direta para os handlers Serverless (Paridade 100% Local <-> Vercel)
+  if (pathname === '/api/produtos' || pathname.startsWith('/api/produtos/')) {
+    return handlerProdutos(req, res);
+  }
+  if (pathname === '/api/financeiro' || pathname.startsWith('/api/financeiro/')) {
+    return handlerFinanceiro(req, res);
+  }
+  if (pathname === '/api/compras' || pathname.startsWith('/api/compras/')) {
+    return handlerCompras(req, res);
+  }
+  if (pathname === '/api/configuracoes' || pathname.startsWith('/api/configuracoes/')) {
+    return handlerConfiguracoes(req, res);
+  }
+  if (pathname === '/api/nfe' || pathname.startsWith('/api/nfe/')) {
+    return handlerNfe(req, res);
   }
 
   // ====================================================================
@@ -755,7 +801,7 @@ async function tratarRequisicao(req, res) {
     <tpEmit>1</tpEmit>
     <prest>
       <CNPJ>${(emitente?.cnpj || '00000000000191').replace(/\D/g, '')}</CNPJ>
-      <xNome>${escXml(emitente?.razaoSocial || 'MIS SUEÑOS COUROS & PELES')}</xNome>
+      <xNome>${escXml(emitente?.razaoSocial || 'EMPRESA GESTORA LTDA')}</xNome>
       <end>
         <xLgr>${escXml(emitente?.logradouro || 'Rua das Indústrias')}</xLgr>
         <nro>${escXml(emitente?.numero || '100')}</nro>
@@ -833,7 +879,7 @@ async function tratarRequisicao(req, res) {
         const valorProdutos = parseFloat(valores?.valorTotal || 0);
         const numeroNfe = Math.floor(1000 + Math.random() * 9000);
         const serieNfe = '1';
-        const emitNome = escTxt(emitente?.razaoSocial || 'MIS SUEÑOS COUROS & PELES');
+        const emitNome = escTxt(emitente?.razaoSocial || 'EMPRESA GESTORA LTDA');
         const emitCnpj = (emitente?.cnpj || '00000000000191').replace(/\D/g, '');
 
         const txtSefaz = [
@@ -883,9 +929,28 @@ async function tratarRequisicao(req, res) {
     }
   }
 
+  // ROTA: Autenticação (/api/auth)
+  if (pathname === '/api/auth' || pathname.startsWith('/api/auth/')) {
+    return handlerAuth(req, res);
+  }
+
+  // ROTA: Usuários (/api/usuarios)
+  if (pathname === '/api/usuarios' || pathname.startsWith('/api/usuarios/')) {
+    return handlerUsuarios(req, res);
+  }
+
   // ROTA 8.5: Anexos e Mídia (Cloudflare R2 / Fallback Local)
   if (pathname === '/api/anexos') {
     return handlerAnexos(req, res);
+  }
+
+  // ROTA 8.6: Pedidos de Venda & Logística (/api/pedidos e /api/pedidos/:id)
+  if (pathname === '/api/pedidos' || pathname.startsWith('/api/pedidos/')) {
+    const matchId = pathname.match(/^\/api\/pedidos\/(\d+)$/);
+    if (matchId) {
+      url.searchParams.set('id', matchId[1]);
+    }
+    return handlerPedidos(req, res);
   }
 
   // ROTA 9: Download de Exportações (CSV e JSON)
@@ -894,7 +959,7 @@ async function tratarRequisicao(req, res) {
     if (fs.existsSync(csvPath)) {
       res.writeHead(200, {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="clientes_missuenos.csv"'
+        'Content-Disposition': 'attachment; filename="clientes_exportacao.csv"'
       });
       return fs.createReadStream(csvPath).pipe(res);
     }
@@ -905,7 +970,7 @@ async function tratarRequisicao(req, res) {
     if (fs.existsSync(jsonPath)) {
       res.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="clientes_missuenos.json"'
+        'Content-Disposition': 'attachment; filename="clientes_exportacao.json"'
       });
       return fs.createReadStream(jsonPath).pipe(res);
     }
@@ -1014,7 +1079,7 @@ try {
 
 server.listen(PORT, () => {
   console.log(`\n======================================================================`);
-  console.log(`  PAINEL WEB & API REST DE CLIENTES MIS SUEÑOS`);
+  console.log(`  PAINEL WEB & API REST DO ERP GESTOR PRO`);
   console.log(`======================================================================`);
   console.log(`  Servidor rodando em: http://localhost:${PORT}`);
   console.log(`  Endpoints REST Ativos:`);

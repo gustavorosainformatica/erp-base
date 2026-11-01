@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Script de Inicialização de Banco SQLite Zerado
+ * Script de Inicialização de Banco SQLite Zerado - ERP Gestor Pro
  * Cria todas as tabelas e índices necessários sem nenhum cliente.
  * Autor: Gustavo Rosa Informática
  */
@@ -24,9 +24,9 @@ const schemaSql = fs.readFileSync(SCHEMA_PATH, 'utf-8');
 console.log(`\n📂 Criando banco em: ${DB_PATH}...`);
 const db = new DatabaseSync(DB_PATH);
 
-// Executa o schema
+// Executa o schema completo
 db.exec(schemaSql);
-console.log('   ✔ Tabelas criadas: clientes, logs_auditoria, arquivos_anexos, produtos');
+console.log('   ✔ 10 Tabelas criadas: clientes, produtos, pedidos, fornecedores, financeiro_lancamentos, compras_xml, configuracoes_sistema, usuarios, logs_auditoria, arquivos_anexos.');
 console.log('   ✔ Índices de alta performance criados.');
 
 // Insere log inicial do sistema
@@ -48,8 +48,10 @@ db.prepare(`
 
 const countClientes = db.prepare('SELECT COUNT(*) as t FROM clientes').get();
 const countProdutos = db.prepare('SELECT COUNT(*) as t FROM produtos').get();
+const countPedidos = db.prepare('SELECT COUNT(*) as t FROM pedidos').get();
 
-console.log('\n📊 Estado do banco:');
+console.log('\n📊 Estado do banco zerado:');
 console.log(`   - Clientes cadastrados: ${countClientes.t}`);
 console.log(`   - Produtos cadastrados: ${countProdutos.t}`);
+console.log(`   - Pedidos cadastrados: ${countPedidos.t}`);
 console.log('\n✅ Banco zerado pronto para uso!');

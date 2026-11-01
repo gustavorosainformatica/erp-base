@@ -1,14 +1,18 @@
 {
   "name": "erp-gestor-base",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Template Base White-Label do ERP Gestor Pro - Clientes, Vendas, Estoque e Central Fiscal",
   "port": 3001,
   "main": "scripts/servidor_web.js",
   "type": "module",
   "scripts": {
-    "web": "node scripts/servidor_web.js",
+    "web": "infisical run --silent -- node scripts/servidor_web.js",
     "init:banco": "node scripts/init_banco_zerado.js",
-    "migrar:turso": "node scripts/migrar_turso.js"
+    "init:usuarios": "infisical run --silent -- node scripts/init_usuarios.js",
+    "migrar:turso": "infisical run --silent -- node scripts/migrar_turso.js",
+    "migrar:v2": "infisical run --silent -- node scripts/migrar_schema_v2.js",
+    "importar:ncm": "infisical run --silent -- node scripts/importar_ncm.js",
+    "configurar-ramo": "infisical run --silent -- node scripts/configurar_ramo.js"
   },
   "keywords": [
     "erp",

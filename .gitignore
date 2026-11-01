@@ -10,17 +10,15 @@ node_modules/
 public/uploads/*
 !public/uploads/.gitkeep
 
-# Arquivos de banco local SQLite temporários e logs
+# Arquivos de banco local SQLite e logs
 *.sqlite
 *.db
-auth
-auth*
 *.log
 npm-debug.log*
 yarn-debug.log*
 .vercel
 
-# Cache estático gerado do banco de dados
+# Cache estático de dados gerados
 public/dados_clientes.js
 
 # Dados brutos de importação e planilhas de clientes específicos
@@ -28,3 +26,7 @@ database/*.csv
 database/*.json
 !database/schema.sql
 ENDEREÇOS DE ENVIO/
+
+# Ignorar apenas arquivos temporários de auth, nunca código-fonte
+auth_token*.json
+.auth/

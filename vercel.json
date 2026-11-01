@@ -13,12 +13,80 @@
   ],
   "routes": [
     {
+      "src": "/api/auth/(.*)",
+      "dest": "/api/auth.js"
+    },
+    {
+      "src": "/api/auth",
+      "dest": "/api/auth.js"
+    },
+    {
+      "src": "/api/usuarios/(.*)",
+      "dest": "/api/usuarios.js"
+    },
+    {
+      "src": "/api/usuarios",
+      "dest": "/api/usuarios.js"
+    },
+    {
       "src": "/api/clientes/(.*)",
       "dest": "/api/clientes.js"
     },
     {
       "src": "/api/clientes",
       "dest": "/api/clientes.js"
+    },
+    {
+      "src": "/api/pedidos/(.*)",
+      "dest": "/api/pedidos.js"
+    },
+    {
+      "src": "/api/pedidos",
+      "dest": "/api/pedidos.js"
+    },
+    {
+      "src": "/api/produtos/(.*)",
+      "dest": "/api/produtos.js"
+    },
+    {
+      "src": "/api/produtos",
+      "dest": "/api/produtos.js"
+    },
+    {
+      "src": "/api/financeiro/(.*)",
+      "dest": "/api/financeiro.js"
+    },
+    {
+      "src": "/api/financeiro",
+      "dest": "/api/financeiro.js"
+    },
+    {
+      "src": "/api/compras/(.*)",
+      "dest": "/api/compras.js"
+    },
+    {
+      "src": "/api/compras",
+      "dest": "/api/compras.js"
+    },
+    {
+      "src": "/api/configuracoes/(.*)",
+      "dest": "/api/configuracoes.js"
+    },
+    {
+      "src": "/api/configuracoes",
+      "dest": "/api/configuracoes.js"
+    },
+    {
+      "src": "/api/anexos/(.*)",
+      "dest": "/api/anexos.js"
+    },
+    {
+      "src": "/api/anexos",
+      "dest": "/api/anexos.js"
+    },
+    {
+      "src": "/api/logs/(.*)",
+      "dest": "/api/logs.js"
     },
     {
       "src": "/api/logs",
