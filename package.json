@@ -1,7 +1,7 @@
 {
   "name": "erp-gestor-base",
-  "version": "2.0.0",
-  "description": "Template Base White-Label do ERP Gestor Pro - Clientes, Vendas, Estoque e Central Fiscal",
+  "version": "3.0.0",
+  "description": "Template Base White-Label do ERP Gestor Pro v3.0 - Clientes, Vendas, Estoque e Central Fiscal",
   "port": 3001,
   "main": "scripts/servidor_web.js",
   "type": "module",

@@ -1,10 +1,14 @@
 /**
- * CLI de Setup Rápido de Ramo de Atividade (Camada 1 - White-Label Template)
+ * CLI de Setup Rápido de Ramo de Atividade (Camada 1 - White-Label Template v3.0)
  * Uso:
  *   npm run configurar-ramo -- --ramo=couros
  *   npm run configurar-ramo -- --ramo=informatica
  *   npm run configurar-ramo -- --ramo=comercio
  *   npm run configurar-ramo -- --ramo=oficina
+ *   npm run configurar-ramo -- --ramo=terraplanagem
+ *   npm run configurar-ramo -- --ramo=moveis
+ *   npm run configurar-ramo -- --ramo=artesanato
+ *   npm run configurar-ramo -- --ramo=roupas
  */
 import { run, inicializarTabelas } from '../lib/db.js';
 import { PRESETS_RAMO } from '../api/configuracoes.js';

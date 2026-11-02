@@ -55,6 +55,54 @@ export const PRESETS_RAMO = {
     label_expedicao: 'Pátio & Liberação',
     categorias_padrao: 'Peças de Reposição,Mão de Obra / Serviços,Fluidos & Lubrificantes,Elétrica,Acessórios,Revisão Preventiva',
     unidades_padrao: 'UN,SERV,LT,HR,KIT,PAR'
+  },
+  terraplanagem: {
+    ramo_preset: 'terraplanagem',
+    nome_fantasia: 'ERP Terraplanagem & Obras',
+    subtitulo_sistema: 'Locação de Máquinas, Terraplanagem & Contratos de Obra',
+    cor_primaria: '#eab308',
+    label_pedidos: 'Ordens de Serviço & Medições',
+    label_produtos: 'Máquinas, Equipamentos & Insumos',
+    label_clientes: 'Clientes & Construtoras',
+    label_expedicao: 'Obras & Operações',
+    categorias_padrao: 'Escavação & Aterro,Locação de Máquinas,Transporte de Terra,Drenagem & Nivelamento,Combustível & Manutenção,Horas Máquina',
+    unidades_padrao: 'HR,DIA,VIAG,M3,KM,UN'
+  },
+  moveis: {
+    ramo_preset: 'moveis',
+    nome_fantasia: 'ERP Móveis & Marcenaria',
+    subtitulo_sistema: 'Gestão de Móveis Planejados, Decoração & Fábrica',
+    cor_primaria: '#a16207',
+    label_pedidos: 'Projetos & Pedidos de Venda',
+    label_produtos: 'Móveis, Chapas & Ferragens',
+    label_clientes: 'Clientes & Arquitetos',
+    label_expedicao: 'Montagem & Entregas',
+    categorias_padrao: 'Salas & Estar,Dormitórios,Cozinhas & Gourmet,Marcenaria & MDF,Ferragens & Puxadores,Decoração',
+    unidades_padrao: 'UN,CJ,M2,KIT,PC'
+  },
+  artesanato: {
+    ramo_preset: 'artesanato',
+    nome_fantasia: 'ERP Artesanatos & Ateliê',
+    subtitulo_sistema: 'Produção Artesanal, Peças Exclusivas & Encomendas',
+    cor_primaria: '#ec4899',
+    label_pedidos: 'Encomendas & Vendas',
+    label_produtos: 'Peças Prontas & Matéria-Prima',
+    label_clientes: 'Clientes & Lojistas',
+    label_expedicao: 'Embalagem & Envios',
+    categorias_padrao: 'Peças Decorativas,Utilitários,Lembrancinhas,Tecidos & Fios,Tintas & Vernizes,Embalagens',
+    unidades_padrao: 'UN,KIT,PC,KG,MT'
+  },
+  roupas: {
+    ramo_preset: 'roupas',
+    nome_fantasia: 'ERP Moda & Confecção',
+    subtitulo_sistema: 'Gestão de Vestuário, Grade de Cores/Tamanhos & Vendas',
+    cor_primaria: '#8b5cf6',
+    label_pedidos: 'Vendas & Condicionais',
+    label_produtos: 'Roupas, Calçados & Acessórios',
+    label_clientes: 'Clientes',
+    label_expedicao: 'Expedição & Balcão',
+    categorias_padrao: 'Feminino,Masculino,Infantil,Calçados,Acessórios,Moda Íntima,Coleção Atual',
+    unidades_padrao: 'PC,PAR,CJ,KIT,UN'
   }
 };
 
