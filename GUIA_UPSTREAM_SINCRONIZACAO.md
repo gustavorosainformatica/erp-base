@@ -79,3 +79,42 @@ Você verá:
    ```
 2. O Git trará todos os novos recursos, telas e correções.
 3. Seus dados de clientes (`clientes.db`, `.env`, `public/app-config.js`) **não serão alterados**, pois cada cliente tem sua própria configuração e base isoladas.
+
+---
+
+## 5. Presets de Ramo Disponíveis no Template v3.0
+
+Para configurar um novo cliente para o seu ramo específico em 1 comando, execute na pasta do projeto:
+
+```powershell
+# 🚜 Terraplanagem, Locação de Máquinas & Obras
+npm run configurar-ramo -- --ramo=terraplanagem
+
+# 🛋️ Loja de Móveis, Decoração & Marcenaria
+npm run configurar-ramo -- --ramo=moveis
+
+# 🎨 Fábrica de Artesanatos, Peças Únicas & Ateliê
+npm run configurar-ramo -- --ramo=artesanato
+
+# 👕 Loja de Roupas, Moda & Confecção
+npm run configurar-ramo -- --ramo=roupas
+
+# 🔧 Oficina Mecânica, Autocenter & Serviços
+npm run configurar-ramo -- --ramo=oficina
+
+# 💻 Informática, Assistência Técnica & TI
+npm run configurar-ramo -- --ramo=informatica
+
+# 🛒 Comércio & Distribuidora em Geral
+npm run configurar-ramo -- --ramo=comercio
+
+# 🪵 Couros, Selaria & Acessórios
+npm run configurar-ramo -- --ramo=couros
+```
+
+Cada preset ajusta automaticamente:
+- Rótulos dos menus e tabelas (ex: "Ordens de Serviço", "Máquinas & Horas", "Contratos de Obra");
+- Categorias padrão sugeridas para o catálogo de produtos e serviços;
+- Unidades de medida usuais (ex: HR, DIA, M3, UN, PC, KG);
+- Cor primária temática do sistema;
+- Títulos e subtítulos de apresentação.
