@@ -16,7 +16,14 @@ import { execSync } from 'node:child_process';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 3000;
+let PORT = process.env.PORT;
+if (!PORT) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8'));
+    if (pkg.port) PORT = pkg.port;
+  } catch {}
+}
+PORT = PORT || 3000;
 const BASE_DIR = path.join(__dirname, '..');
 const PUBLIC_DIR = path.join(BASE_DIR, 'public');
 const DB_DIR = path.join(BASE_DIR, 'database');
@@ -35,6 +42,8 @@ const { default: handlerFinanceiro } = await import('../api/financeiro.js');
 const { default: handlerCompras } = await import('../api/compras.js');
 const { default: handlerConfiguracoes } = await import('../api/configuracoes.js');
 const { default: handlerNfe } = await import('../api/nfe.js');
+const { default: handlerSistemaArmazenamento } = await import('../api/sistema_armazenamento.js');
+const { default: handlerSistemaManutencao } = await import('../api/sistema_manutencao.js');
 
 // Campos editáveis do cadastro de clientes
 const CAMPOS_CLIENTE = [
@@ -302,6 +311,12 @@ async function tratarRequisicao(req, res) {
   }
   if (pathname === '/api/nfe' || pathname.startsWith('/api/nfe/')) {
     return handlerNfe(req, res);
+  }
+  if (pathname === '/api/sistema/armazenamento' || pathname.startsWith('/api/sistema/armazenamento')) {
+    return handlerSistemaArmazenamento(req, res);
+  }
+  if (pathname === '/api/sistema/manutencao' || pathname === '/api/sistema/otimizar' || pathname === '/api/sistema/limpar-logs') {
+    return handlerSistemaManutencao(req, res);
   }
 
   // ====================================================================
@@ -801,7 +816,7 @@ async function tratarRequisicao(req, res) {
     <tpEmit>1</tpEmit>
     <prest>
       <CNPJ>${(emitente?.cnpj || '00000000000191').replace(/\D/g, '')}</CNPJ>
-      <xNome>${escXml(emitente?.razaoSocial || 'EMPRESA GESTORA LTDA')}</xNome>
+      <xNome>${escXml(emitente?.razaoSocial || 'MIS SUEÑOS COUROS & PELES')}</xNome>
       <end>
         <xLgr>${escXml(emitente?.logradouro || 'Rua das Indústrias')}</xLgr>
         <nro>${escXml(emitente?.numero || '100')}</nro>
@@ -879,7 +894,7 @@ async function tratarRequisicao(req, res) {
         const valorProdutos = parseFloat(valores?.valorTotal || 0);
         const numeroNfe = Math.floor(1000 + Math.random() * 9000);
         const serieNfe = '1';
-        const emitNome = escTxt(emitente?.razaoSocial || 'EMPRESA GESTORA LTDA');
+        const emitNome = escTxt(emitente?.razaoSocial || 'MIS SUEÑOS COUROS & PELES');
         const emitCnpj = (emitente?.cnpj || '00000000000191').replace(/\D/g, '');
 
         const txtSefaz = [
@@ -959,7 +974,7 @@ async function tratarRequisicao(req, res) {
     if (fs.existsSync(csvPath)) {
       res.writeHead(200, {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="clientes_exportacao.csv"'
+        'Content-Disposition': 'attachment; filename="clientes_missuenos.csv"'
       });
       return fs.createReadStream(csvPath).pipe(res);
     }
@@ -970,7 +985,7 @@ async function tratarRequisicao(req, res) {
     if (fs.existsSync(jsonPath)) {
       res.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="clientes_exportacao.json"'
+        'Content-Disposition': 'attachment; filename="clientes_missuenos.json"'
       });
       return fs.createReadStream(jsonPath).pipe(res);
     }
@@ -1079,7 +1094,7 @@ try {
 
 server.listen(PORT, () => {
   console.log(`\n======================================================================`);
-  console.log(`  PAINEL WEB & API REST DO ERP GESTOR PRO`);
+  console.log(`  PAINEL WEB & API REST DE CLIENTES MIS SUEÑOS`);
   console.log(`======================================================================`);
   console.log(`  Servidor rodando em: http://localhost:${PORT}`);
   console.log(`  Endpoints REST Ativos:`);
