@@ -47,7 +47,9 @@ CREATE TABLE IF NOT EXISTS produtos (
   descricao TEXT,
   ativo INTEGER DEFAULT 1,
   data_cadastro TEXT NOT NULL,
-  data_atualizacao TEXT
+  data_atualizacao TEXT,
+  data_atualizacao_senha TEXT,
+  exigir_troca_senha INTEGER DEFAULT 0
 );
 
 -- 3. Tabela de Gestão de Vendas, Encomendas e Pedidos
