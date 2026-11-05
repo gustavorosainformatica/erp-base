@@ -23,14 +23,15 @@
 
   const configProd = {
     appName: "ERP Gestor Pro | Gestão Integrada de Clientes, Vendas & Fiscal",
-    shortName: "ERP Gestor",
-    tagline: "Gestão Integrada de Clientes & Fiscal",
+    shortName: "", // Produção: somente o logotipo ampliado, sem textos ao lado
+    tagline: "", // Produção: sem subtítulo para ocupar espaço mínimo
     companyName: "Empresa Gestora LTDA",
     companyRazaoSocial: "EMPRESA GESTORA LTDA",
     userName: "Administrador",
     userRole: "Gestão & Administração",
     userInitials: "ADM",
     logoEmoji: "💼",
+    logoImage: "logo.png",
     stockModuleName: "Estoque & Produtos",
     breadcrumbName: "ERP Gestor Pro",
     companyAddress: "Av. Central, nº 100 - Centro",
@@ -40,15 +41,17 @@
     dataNoticeTitle: "BASE DE CLIENTES & CRM",
     dataNoticeText: "Cadastre novos clientes ou utilize os filtros para gerenciar sua carteira de destinatários.",
     dataNoticeBadge: "🟢 SISTEMA ATIVO",
-    isTemplateBase: true
+    isTemplateBase: true,
+    isDevEnvironment: false
   };
 
   const configDev = {
     ...configProd,
-    appName: "ERP Gestor Pro [HOMOLOGAÇÃO] | Ambiente de Testes & Validação",
-    shortName: "ERP Gestor [DEV]",
-    tagline: "Ambiente de Homologação & Testes",
-    dataNoticeBadge: "🟡 AMBIENTE DE HOMOLOGAÇÃO"
+    appName: "ERP Gestor Pro [TESTES]",
+    shortName: "TESTES", // Testes: somente o logotipo + badge TESTES ao lado
+    tagline: "", // Testes: sem texto longo para ocupar espaço mínimo
+    dataNoticeBadge: "🟡 AMBIENTE DE HOMOLOGAÇÃO",
+    isDevEnvironment: true
   };
 
   window.APP_CONFIG = isDev ? configDev : configProd;
