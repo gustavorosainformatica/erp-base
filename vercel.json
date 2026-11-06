@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "missuenos-clientes",
+  "name": "erp-base",
   "builds": [
     {
       "src": "api/index.js",
