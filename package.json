@@ -1,28 +1,27 @@
 {
-  "name": "erp-gestor-base",
-  "version": "3.0.0",
-  "description": "Template Base White-Label do ERP Gestor Pro v3.0 - Clientes, Vendas, Estoque e Central Fiscal",
-  "port": 3001,
+  "name": "missuenos-clientes",
+  "version": "2.0.0",
+  "description": "Sistema de Gestão Integrada Mis Sueños ERP",
+  "port": 3000,
   "main": "scripts/servidor_web.js",
   "type": "module",
   "scripts": {
-    "web": "infisical run --silent -- node scripts/servidor_web.js",
-    "init:banco": "node scripts/init_banco_zerado.js",
-    "init:usuarios": "infisical run --silent -- node scripts/init_usuarios.js",
+    "test": "node --test tests/*.test.js",
+    "web": "node scripts/servidor_web.js",
+    "web:infisical": "infisical run --silent -- node scripts/servidor_web.js",
+    "promover:prod": "node scripts/promover_producao.js",
+    "consultar": "node scripts/consultar.js",
     "migrar:turso": "infisical run --silent -- node scripts/migrar_turso.js",
-    "migrar:v2": "infisical run --silent -- node scripts/migrar_schema_v2.js",
-    "importar:ncm": "infisical run --silent -- node scripts/importar_ncm.js",
-    "configurar-ramo": "infisical run --silent -- node scripts/configurar_ramo.js"
+    "migrar:v2": "node scripts/migrar_schema_v2.js",
+    "importar:ncm": "node scripts/importar_ncm.js",
+    "configurar-ramo": "node scripts/configurar_ramo.js"
   },
   "keywords": [
-    "erp",
-    "white-label",
-    "gestao",
     "clientes",
-    "estoque",
-    "fiscal",
     "sqlite",
-    "turso"
+    "producao",
+    "mis-suenos",
+    "erp"
   ],
   "author": "Gustavo Rosa Informática",
   "license": "MIT",
