@@ -1,6 +1,6 @@
 /**
  * Vercel Serverless Function Dispatcher / API Gateway Central: /api
- * Unificação de Rotas Serverless - Mis Sueños ERP
+ * Unificação de Rotas Serverless - ERP Gestor Pro
  * Autor: Gustavo Rosa Informática
  * 
  * Este arquivo unifica todos os endpoints da API REST em uma única Serverless Function,

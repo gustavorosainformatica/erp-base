@@ -2,7 +2,7 @@
  * Vercel Serverless Function & Node.js Handler: /api/sistema
  * Gestão Unificada do Sistema: Telemetria de Armazenamento, Quotas,
  * Otimização de Banco (VACUUM) e Cold Storage no Cloudflare R2
- * Autor: Gustavo Rosa Informática / Mis Sueños ERP
+ * Autor: Gustavo Rosa Informática / ERP Gestor Pro
  */
 
 import fs from 'node:fs';

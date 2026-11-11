@@ -93,7 +93,7 @@ async function main() {
       `, [
         item.sku, item.nome, item.cat, item.un, item.ncm,
         item.custo, item.venda, item.est,
-        `Item oficial tabela fiscal Mis Sueños (${item.sku}) - NCM ${item.ncm}`,
+        `Item oficial tabela fiscal ERP Gestor Pro (${item.sku}) - NCM ${item.ncm}`,
         agora
       ]);
       inseridos++;

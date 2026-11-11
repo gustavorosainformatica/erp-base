@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Servidor Web Local e API REST para o Painel de Clientes Mis Sueños
+ * Servidor Web Local e API REST para o Painel de Clientes ERP Gestor Pro
  * Autor: Gustavo Rosa Informática
  * Suporte a CRUD completo, persistência em SQLite nativo (node:sqlite),
  * sincronização em tempo real e REGISTRO DE AUDITORIA/LOGS NO BANCO.
@@ -235,8 +235,8 @@ function sincronizarArquivosSecundarios() {
     // 1. clientes.json
     fs.writeFileSync(path.join(DB_DIR, 'clientes.json'), JSON.stringify(todos, null, 2), 'utf-8');
 
-    // 2. dados_clientes.js (para suporte offline via dois cliques no Windows)
-    const jsContent = `/**\n * Base de Clientes Mis Sueños (Offline)\n * Atualizado em: ${new Date().toISOString()}\n */\nwindow.CLIENTES_DATA = ${JSON.stringify(todos, null, 2)};\n`;
+    // 2. dados_clientes.js mantido vazio por governança Zero-PII (carregamento exclusivamente via API /api/clientes)
+    const jsContent = `/**\n * Cache estático desativado por governança Zero-PII\n */\nwindow.CLIENTES_DATA = [];\n`;
     fs.writeFileSync(path.join(PUBLIC_DIR, 'dados_clientes.js'), jsContent, 'utf-8');
 
     // 3. clientes.csv
@@ -885,7 +885,7 @@ async function tratarRequisicao(req, res) {
     <tpEmit>1</tpEmit>
     <prest>
       <CNPJ>${(emitente?.cnpj || '00000000000191').replace(/\D/g, '')}</CNPJ>
-      <xNome>${escXml(emitente?.razaoSocial || 'MIS SUEÑOS COUROS & PELES')}</xNome>
+      <xNome>${escXml(emitente?.razaoSocial || 'EMPRESA DEMONSTRACAO LTDA')}</xNome>
       <end>
         <xLgr>${escXml(emitente?.logradouro || 'Rua das Indústrias')}</xLgr>
         <nro>${escXml(emitente?.numero || '100')}</nro>
@@ -963,7 +963,7 @@ async function tratarRequisicao(req, res) {
         const valorProdutos = parseFloat(valores?.valorTotal || 0);
         const numeroNfe = Math.floor(1000 + Math.random() * 9000);
         const serieNfe = '1';
-        const emitNome = escTxt(emitente?.razaoSocial || 'MIS SUEÑOS COUROS & PELES');
+        const emitNome = escTxt(emitente?.razaoSocial || 'EMPRESA DEMONSTRACAO LTDA');
         const emitCnpj = (emitente?.cnpj || '00000000000191').replace(/\D/g, '');
 
         const txtSefaz = [
@@ -1178,7 +1178,7 @@ try {
 
 server.listen(PORT, () => {
   console.log(`\n======================================================================`);
-  console.log(`  PAINEL WEB & API REST DE CLIENTES MIS SUEÑOS`);
+  console.log(`  PAINEL WEB & API REST DE CLIENTES EMPRESA DEMO`);
   console.log(`======================================================================`);
   console.log(`  Servidor rodando em: http://localhost:${PORT}`);
   console.log(`  Endpoints REST Ativos:`);

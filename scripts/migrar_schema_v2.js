@@ -1,5 +1,5 @@
 /**
- * Script de Migração de Schema v2 - Mis Sueños ERP & Template Base
+ * Script de Migração de Schema v2 - ERP Gestor Pro & Template Base
  * Autor: Gustavo Rosa Informática
  * 
  * Garante de forma idempotente (no SQLite Local ou Turso Cloud):

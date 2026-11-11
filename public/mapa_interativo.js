@@ -1,5 +1,5 @@
 /**
- * Módulo de Mapa de Calor Interativo do Brasil - Mis Sueños
+ * Módulo de Mapa de Calor Interativo do Brasil - ERP Gestor Pro
  * Autor: Gustavo Rosa Informática
  */
 

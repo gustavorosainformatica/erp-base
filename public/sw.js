@@ -1,4 +1,4 @@
-// Service Worker - Mis Sueños ERP PWA
+// Service Worker - ERP Gestor Pro PWA
 // v30: Elimina cache agressivo de HTML e força Network-Only para navegação local,
 // garantindo que qualquer alteração apareça imediatamente sem necessidade de Control + F5.
 // v31: Expurgar cache agressivo, alinhar controles de janelas flutuantes e destravar redimensionamento

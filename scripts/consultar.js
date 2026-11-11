@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CLI de Consulta Rápida de Clientes - Mis Sueños
+ * CLI de Consulta Rápida de Clientes - ERP Gestor Pro
  * Autor: Gustavo Rosa Informática
  * Uso:
  *   node scripts/consultar.js <termo_de_busca>
@@ -41,7 +41,7 @@ const query = process.argv.slice(2).join(' ').trim();
 
 if (!query) {
   console.log(`${c.bold}${c.cyan}======================================================================${c.reset}`);
-  console.log(`  ${c.bold}SISTEMA DE CONSULTA DE CLIENTES - MIS SUEÑOS${c.reset}`);
+  console.log(`  ${c.bold}SISTEMA DE CONSULTA DE CLIENTES - EMPRESA DEMO${c.reset}`);
   console.log(`${c.bold}${c.cyan}======================================================================${c.reset}`);
   console.log(`  ${c.bold}Total de clientes cadastrados:${c.reset} ${c.green}${clientes.length}${c.reset}`);
   

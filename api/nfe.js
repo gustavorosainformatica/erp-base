@@ -118,7 +118,7 @@ export default async function handler(req, res) {
         protocolo: doc.protocolo_autorizacao || '143260000000001',
         emitente: {
           cnpj: '00.000.000/0001-91',
-          razaoSocial: 'MIS SUEÑOS COUROS & PELES',
+          razaoSocial: 'EMPRESA DEMONSTRACAO LTDA',
           ie: 'ISENTO',
           uf: 'RS',
           cidade: 'Sapiranga',
@@ -131,7 +131,7 @@ export default async function handler(req, res) {
         itens: [
           {
             codigo: '01',
-            descricao: 'ARTIGOS DE COURO E SELARIA MIS SUEÑOS',
+            descricao: 'ARTIGOS DE COURO E SELARIA EMPRESA DEMO',
             ncm: '42050000',
             cfop: '5102',
             unidade: 'UN',
@@ -248,7 +248,7 @@ export default async function handler(req, res) {
       // Configuração e dados do Emitente
       const emitenteFinal = {
         cnpj: (emitente?.cnpj || '00000000000191').replace(/\D/g, ''),
-        razaoSocial: emitente?.razaoSocial || 'MIS SUEÑOS COUROS & PELES',
+        razaoSocial: emitente?.razaoSocial || 'EMPRESA DEMONSTRACAO LTDA',
         ie: (emitente?.ie || 'ISENTO').replace(/\D/g, '') || 'ISENTO',
         uf: emitente?.uf || 'RS',
         cidade: emitente?.cidade || 'Sapiranga',

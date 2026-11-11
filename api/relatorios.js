@@ -1,6 +1,6 @@
 /**
  * Vercel Serverless Function & REST API: /api/relatorios
- * Central de Relatórios Executivos & BI - Mis Sueños ERP
+ * Central de Relatórios Executivos & BI - ERP Gestor Pro
  * Autor: Gustavo Rosa Informática
  * 
  * Agregações analíticas de alta performance (SQLite / Turso):
@@ -113,8 +113,8 @@ async function obterDadosEmpresa() {
   for (const c of configs) mapa[c.chave] = c.valor;
 
   return {
-    razaoSocial: mapa.razao_social || 'MIS SUEÑOS COUROS & PELES',
-    nomeFantasia: mapa.nome_fantasia || 'Mis Sueños ERP',
+    razaoSocial: mapa.razao_social || 'EMPRESA DEMONSTRACAO LTDA',
+    nomeFantasia: mapa.nome_fantasia || 'ERP Gestor Pro',
     cnpj: mapa.cnpj || '00.000.000/0001-91',
     cidade: mapa.cidade || 'Sapiranga/RS',
     subtitulo: mapa.subtitulo_sistema || 'Couros & Insumos • Sapiranga/RS'

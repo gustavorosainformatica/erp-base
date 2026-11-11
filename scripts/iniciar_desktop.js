@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * INICIALIZADOR SILENCIOSO DESKTOP - MIS SUEÑOS ERP
+ * INICIALIZADOR SILENCIOSO DESKTOP - EMPRESA DEMO ERP
  * Autor: Gustavo Rosa Informática
  * 
  * Abre o sistema em Modo Aplicativo Nativo (sem barra de URL).

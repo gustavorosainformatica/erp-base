@@ -1,7 +1,7 @@
 /**
  * Vercel Serverless Function & REST API: /api/estoque
  * Módulo Universal de Estoque & Ficha Kardex Multi-Ramo
- * Autor: Gustavo Rosa Informática / Mis Sueños ERP
+ * Autor: Gustavo Rosa Informática / ERP Gestor Pro
  * 
  * Funcionalidades:
  * - POST /api/estoque/movimentar : Registro de entradas e saídas com cálculo atômico de saldos
