@@ -4,7 +4,8 @@
 // v31: Expurgar cache agressivo, alinhar controles de janelas flutuantes e destravar redimensionamento
 // v56: Espelho do Pedido A4 (Layout Comercial) & Romaneio de Galpão (Checklist de Expedição)
 // v59: Interface Responsiva Mobile-First (Card View, Bottom Nav 5 abas e Fullscreen Modal)
-const CACHE_NAME = 'missuenos-pwa-v59';
+// v60: Sanfona Retrátil de KPIs Mobile (Opção A) e Cabeçalho Unificado com Voltar ao Painel
+const CACHE_NAME = 'missuenos-pwa-v60';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/favicon.ico',
