@@ -204,9 +204,14 @@ export default async function handler(req, res) {
         : 'EDICAO_CADASTRO';
 
       await registrarLog({
-        clienteId: id,
-        clienteNome: clienteAtualizado.nome,
+        usuarioId: req?.body?.usuario_id || null,
+        usuarioNome: req?.body?.usuario_nome || 'SISTEMA',
+        modulo: 'CLIENTES',
         tipoAcao: tipoAcao,
+        referenciaId: `CLIENTE #${id}`,
+        descricao: `Cadastro do cliente ${clienteAtualizado.nome} atualizado (${camposAlterados.join(', ')})`,
+        dadosAnteriores: clienteExistente,
+        dadosNovos: clienteAtualizado,
         camposAlterados: camposAlterados,
         detalhes: camposAlterados.length > 0 ? `Campos: ${camposAlterados.join(', ')}` : 'Sem mudanças',
         req: req
@@ -291,9 +296,13 @@ export default async function handler(req, res) {
       const novoCliente = await get('SELECT * FROM clientes WHERE id = ?', [novoId]);
 
       await registrarLog({
-        clienteId: novoId,
-        clienteNome: novoCliente.nome,
+        usuarioId: payload.usuario_id || null,
+        usuarioNome: payload.usuario_nome || 'SISTEMA',
+        modulo: 'CLIENTES',
         tipoAcao: 'NOVO_CADASTRO',
+        referenciaId: `CLIENTE #${novoId}`,
+        descricao: `Novo cliente ${novoCliente.nome} cadastrado em ${novoCliente.cidade}/${novoCliente.uf}`,
+        dadosNovos: novoCliente,
         camposAlterados: ['cadastro_completo'],
         detalhes: `Novo cliente cadastrado em ${novoCliente.cidade}/${novoCliente.uf}`,
         req: req

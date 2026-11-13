@@ -1,15 +1,18 @@
 /**
  * Vercel Serverless Function & Node.js Handler: /api/sistema
  * Gestão Unificada do Sistema: Telemetria de Armazenamento, Quotas,
- * Otimização de Banco (VACUUM) e Cold Storage no Cloudflare R2
- * Autor: Gustavo Rosa Informática / ERP Gestor Pro
+ * Otimização de Banco (VACUUM), Snapshots R2 e Cold Storage de Logs
+ * Autor: Gustavo Rosa Informática
+ * Projeto: ERP Matriz Universal v2.0 (Agnóstico & Neutro)
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { query, get, run, modoAtivo } from '../lib/db.js';
-import { salvarArquivo, getStorageStatus } from '../lib/storage.js';
+import { salvarArquivo, getStorageStatus, listarArquivos } from '../lib/storage.js';
+import { registrarLog } from '../lib/audit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -121,119 +124,79 @@ export async function obterMetricasArmazenamento() {
 
   try {
     const pc = await query('PRAGMA page_count');
-    if (pc && pc[0]) {
-      pageCount = Number(pc[0].page_count || Object.values(pc[0])[0] || 0);
-    }
     const ps = await query('PRAGMA page_size');
-    if (ps && ps[0]) {
-      pageSize = Number(ps[0].page_size || Object.values(ps[0])[0] || 4096);
-    }
     const fc = await query('PRAGMA freelist_count');
-    if (fc && fc[0]) {
-      freelistCount = Number(fc[0].freelist_count || Object.values(fc[0])[0] || 0);
-    }
-  } catch (err) {
-    console.warn('[METRICAS PRAGMA ERRO]', err.message);
-  }
 
-  const bancoBytesEstimados = pageCount * pageSize;
-  const paginasLivresBytes = freelistCount * pageSize;
+    pageCount = Number(pc?.[0]?.page_count || Object.values(pc?.[0] || {})[0] || 0);
+    pageSize = Number(ps?.[0]?.page_size || Object.values(ps?.[0] || {})[0] || 4096);
+    freelistCount = Number(fc?.[0]?.freelist_count || Object.values(fc?.[0] || {})[0] || 0);
+  } catch (err) {
+    console.warn('[STORAGE METRICAS AVISO]', err.message);
+  }
 
   let sqliteLocalBytes = 0;
   if (fs.existsSync(DB_PATH)) {
     try {
-      const dbStats = fs.statSync(DB_PATH);
-      sqliteLocalBytes = dbStats.size;
+      const stats = fs.statSync(DB_PATH);
+      sqliteLocalBytes = stats.size;
     } catch {}
   }
-  if (sqliteLocalBytes === 0) {
-    sqliteLocalBytes = bancoBytesEstimados;
-  }
 
-  const tursoUsadoBytes = bancoBytesEstimados;
-  const tursoPercentual = (tursoUsadoBytes / TURSO_LIMITE_BYTES) * 100;
+  const tursoCalculadoBytes = pageCount * pageSize;
+  const bancoUsadoBytes = modo.includes('Turso') ? tursoCalculadoBytes : (sqliteLocalBytes || tursoCalculadoBytes);
+  const tursoPercentual = (bancoUsadoBytes / TURSO_LIMITE_BYTES) * 100;
 
-  const uploadsInfo = calcularTamanhoDiretorio(UPLOADS_DIR);
-  let totalAnexosBytes = uploadsInfo.totalBytes;
-  let totalAnexosArquivos = uploadsInfo.totalArquivos;
-
-  try {
-    const sumAnexos = await get('SELECT COUNT(*) as total, SUM(tamanho_bytes) as total_bytes FROM arquivos_anexos');
-    if (sumAnexos && sumAnexos.total > 0 && sumAnexos.total_bytes) {
-      totalAnexosArquivos = Math.max(totalAnexosArquivos, Number(sumAnexos.total || 0));
-      totalAnexosBytes = Math.max(totalAnexosBytes, Number(sumAnexos.total_bytes || 0));
-    }
-  } catch {}
-
+  const { totalBytes: totalAnexosBytes, totalArquivos: totalAnexosArquivos } = calcularTamanhoDiretorio(UPLOADS_DIR);
   const r2Percentual = (totalAnexosBytes / R2_LIMITE_BYTES) * 100;
 
-  const tabelasParaContar = [
-    { id: 'clientes', label: 'Clientes & CRM (Base Principal)', pesoMedio: 1300 },
-    { id: 'pedidos', label: 'Pedidos & Vendas', pesoMedio: 3000 },
-    { id: 'logs_auditoria', label: 'Histórico de Logs & Auditoria', pesoMedio: 210 },
-    { id: 'arquivos_anexos', label: 'Metadados de Anexos & Fotos', pesoMedio: 850 },
-    { id: 'produtos', label: 'Produtos & Estoque', pesoMedio: 2000 },
-    { id: 'financeiro_lancamentos', label: 'Lançamentos Financeiros', pesoMedio: 1500 },
-    { id: 'fornecedores', label: 'Fornecedores', pesoMedio: 1200 },
-    { id: 'usuarios', label: 'Operadores & RBAC', pesoMedio: 900 }
+  const listaTabelas = [
+    'clientes', 'pedidos', 'produtos', 'estoque_movimentacoes',
+    'financeiro_lancamentos', 'fornecedores', 'configuracoes_sistema',
+    'usuarios', 'logs_auditoria', 'arquivos_anexos'
   ];
 
   const tabelas = [];
-  let somaEstimada = 0;
-
-  for (const t of tabelasParaContar) {
+  for (const tab of listaTabelas) {
     try {
-      const resCount = await get(`SELECT COUNT(*) as total FROM ${t.id}`);
-      const qtd = Number(resCount?.total || 0);
-      const estBytes = qtd * t.pesoMedio;
-      somaEstimada += estBytes;
+      const resCount = await query(`SELECT COUNT(*) as qtd FROM ${tab}`);
+      const qtd = Number(resCount?.[0]?.qtd || Object.values(resCount?.[0] || {})[0] || 0);
+      const espacoEstimadoBytes = qtd * 512;
       tabelas.push({
-        tabela: t.id,
-        label: t.label,
+        nome: tab,
         registros: qtd,
-        bytes_estimados: estBytes,
-        tamanho_formatado: formatarBytes(estBytes)
+        espaco_estimado_bytes: espacoEstimadoBytes,
+        espaco_estimado_formatado: formatarBytes(espacoEstimadoBytes),
+        percentual_banco: bancoUsadoBytes > 0 ? Number(((espacoEstimadoBytes / bancoUsadoBytes) * 100).toFixed(2)) : 0
       });
-    } catch {}
+    } catch {
+      tabelas.push({
+        nome: tab,
+        registros: 0,
+        espaco_estimado_bytes: 0,
+        espaco_estimado_formatado: '0 B',
+        percentual_banco: 0
+      });
+    }
   }
 
-  for (const t of tabelas) {
-    t.percentual = somaEstimada > 0 ? Number(((t.bytes_estimados / somaEstimada) * 100).toFixed(1)) : 0;
-  }
-
-  const maiorPercentual = Math.max(tursoPercentual, r2Percentual);
-  let alertaNivel = 'NORMAL';
-  if (maiorPercentual >= 75) {
-    alertaNivel = 'NIVEL_75';
-  } else if (maiorPercentual >= 50) {
-    alertaNivel = 'NIVEL_50';
-  } else if (maiorPercentual >= 25) {
-    alertaNivel = 'NIVEL_25';
-  }
+  tabelas.sort((a, b) => b.registros - a.registros);
 
   return {
-    sucesso: true,
-    data_consulta: new Date().toISOString(),
-    ambiente_banco: modo,
-    alerta_global: {
-      nivel: alertaNivel,
-      maior_percentual: Number(maiorPercentual.toFixed(2)),
-      precisa_alerta: maiorPercentual >= 25
-    },
+    timestamp: new Date().toISOString(),
+    modo_ativo: modo,
     metricas: {
-      turso: {
-        nome: 'Turso Cloud (libSQL)',
-        plano: 'Starter Free',
-        usado_bytes: tursoUsadoBytes,
-        usado_formatado: formatarBytes(tursoUsadoBytes),
+      banco_dados: {
+        nome: 'Banco de Dados ERP (Turso / SQLite)',
+        modo: modo,
+        usado_bytes: bancoUsadoBytes,
+        usado_formatado: formatarBytes(bancoUsadoBytes),
         limite_bytes: TURSO_LIMITE_BYTES,
         limite_formatado: '9.0 GB',
         percentual_usado: Number(tursoPercentual.toFixed(3)),
-        paginas_ativas: pageCount,
-        tamanho_pagina_bytes: pageSize,
-        paginas_livres_freelist: freelistCount,
-        bytes_reaproveitaveis: paginasLivresBytes,
-        bytes_reaproveitaveis_formatado: formatarBytes(paginasLivresBytes)
+        page_count: pageCount,
+        page_size: pageSize,
+        espaco_reaproveitavel_bytes: freelistCount * pageSize,
+        espaco_reaproveitavel_formatado: formatarBytes(freelistCount * pageSize)
       },
       sqlite_local: {
         nome: 'SQLite Local (Servidor Node.js)',
@@ -337,65 +300,54 @@ export async function arquivarELimparLogs({ diasRetencao = 90, forcarTodos = fal
     };
   }
 
-  const cabecalho = 'ID;Cliente_ID;Cliente_Nome;Tipo_Acao;Campos_Alterados;Detalhes;IP_Origem;Data_Hora\r\n';
+  const cabecalho = 'ID;Usuario_ID;Usuario_Nome;Modulo;Tipo_Acao;Referencia_ID;Descricao;IP_Origem;Data_Hora\r\n';
   const linhas = logsParaArquivar.map(l => {
     return [
       l.id,
-      l.cliente_id || '',
-      escCsv(l.cliente_nome),
+      l.usuario_id || '',
+      escCsv(l.usuario_nome || 'SISTEMA'),
+      escCsv(l.modulo || 'GERAL'),
       escCsv(l.tipo_acao),
-      escCsv(l.campos_alterados),
-      escCsv(l.detalhes),
-      escCsv(l.ip_origem),
+      escCsv(l.referencia_id || ''),
+      escCsv(l.descricao || l.detalhes || ''),
+      escCsv(l.ip_origem || ''),
       escCsv(l.data_hora)
     ].join(';');
   }).join('\r\n');
 
-  const csvCompleto = '\uFEFF' + cabecalho + linhas;
-  const bufferCsv = Buffer.from(csvCompleto, 'utf-8');
+  const conteudoCsv = cabecalho + linhas;
+  const bufferCsv = Buffer.from(conteudoCsv, 'utf-8');
 
-  const dataCorteStr = limiteData.toISOString().slice(0, 10);
-  const nomeArquivo = `logs_auditoria_ate_${dataCorteStr}_${Date.now()}.csv`;
+  const timestampStr = agora.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+  const nomeArquivo = `auditoria_cold_storage_${timestampStr}.csv`;
 
-  let resultadoStorage;
-  try {
-    resultadoStorage = await salvarArquivo({
-      buffer: bufferCsv,
-      nomeOriginal: nomeArquivo,
-      mimetype: 'text/csv; charset=utf-8',
-      pasta: 'backups/logs'
-    });
-  } catch (err) {
-    console.error('[ERRO STORAGE COLD STORAGE]', err);
-    throw new Error('Falha ao enviar backup para o Cloudflare R2 / Armazenamento: ' + err.message);
-  }
+  const resultadoStorage = await salvarArquivo({
+    buffer: bufferCsv,
+    nomeOriginal: nomeArquivo,
+    mimetype: 'text/csv; charset=utf-8',
+    pasta: 'cold_storage'
+  });
 
   const idsParaDeletar = logsParaArquivar.map(l => l.id);
-  const LOTE_MAX = 500;
+  const loteTamanho = 200;
   let totalDeletados = 0;
 
-  for (let i = 0; i < idsParaDeletar.length; i += LOTE_MAX) {
-    const lote = idsParaDeletar.slice(i, i + LOTE_MAX);
-    const placeholders = lote.map(() => '?').join(',');
-    const delRes = await run(`DELETE FROM logs_auditoria WHERE id IN (${placeholders})`, lote);
-    totalDeletados += delRes.rowsAffected || lote.length;
+  for (let i = 0; i < idsParaDeletar.length; i += loteTamanho) {
+    const pedaco = idsParaDeletar.slice(i, i + loteTamanho);
+    const placeholders = pedaco.map(() => '?').join(',');
+    await run(`DELETE FROM logs_auditoria WHERE id IN (${placeholders})`, pedaco);
+    totalDeletados += pedaco.length;
   }
 
-  let otimizacaoRes = null;
-  try {
-    otimizacaoRes = await otimizarBanco();
-  } catch {}
-
+  const otimizacaoRes = await otimizarBanco();
   const storageStatus = getStorageStatus();
 
   return {
     sucesso: true,
     logs_arquivados: totalDeletados,
-    data_corte: dataCorteStr,
-    arquivo_backup: {
-      nome: nomeArquivo,
+    arquivo_remoto: {
       url: resultadoStorage.url,
-      chave: resultadoStorage.chave,
+      chave: resultadoStorage.key || resultadoStorage.chave,
       tamanho_bytes: bufferCsv.length,
       provedor: storageStatus.provedor
     },
@@ -405,7 +357,88 @@ export async function arquivarELimparLogs({ diasRetencao = 90, forcarTodos = fal
 }
 
 /**
- * 4. Handler Principal Vercel Serverless / Node.js
+ * 4. Rotinas de Backup Automático & Sob Demanda (Cloudflare R2 / Fallback Local)
+ */
+export async function gerarBackupSistema({ usuarioId = null, usuarioNome = 'ADMINISTRADOR', req = null } = {}) {
+  let bufferBanco = null;
+  const modo = modoAtivo();
+
+  if (fs.existsSync(DB_PATH)) {
+    bufferBanco = fs.readFileSync(DB_PATH);
+  } else {
+    // Se estiver em modo Turso ou sem arquivo local físico, faz dump estruturado das tabelas
+    const tabelas = ['clientes', 'pedidos', 'produtos', 'estoque_movimentacoes', 'financeiro_lancamentos', 'fornecedores', 'configuracoes_sistema', 'usuarios', 'logs_auditoria'];
+    const dump = {};
+    for (const tab of tabelas) {
+      try {
+        dump[tab] = await query(`SELECT * FROM ${tab}`);
+      } catch {}
+    }
+    bufferBanco = Buffer.from(JSON.stringify(dump, null, 2), 'utf-8');
+  }
+
+  // Compactação GZIP de alta performance
+  const bufferGzip = zlib.gzipSync(bufferBanco);
+
+  const agora = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const timestampStr = `${agora.getFullYear()}-${pad(agora.getMonth() + 1)}-${pad(agora.getDate())}_${pad(agora.getHours())}${pad(agora.getMinutes())}${pad(agora.getSeconds())}`;
+  const ext = fs.existsSync(DB_PATH) ? 'sqlite.gz' : 'json.gz';
+  const nomeArquivo = `backup_erp_${timestampStr}.${ext}`;
+
+  const uploadRes = await salvarArquivo({
+    buffer: bufferGzip,
+    nomeOriginal: nomeArquivo,
+    mimetype: 'application/gzip',
+    pasta: 'backups',
+    preservarNomeExato: true
+  });
+
+  await registrarLog({
+    usuarioId: usuarioId ? Number(usuarioId) : null,
+    usuarioNome,
+    modulo: 'SISTEMA',
+    tipoAcao: 'BACKUP_CRIADO',
+    referenciaId: nomeArquivo,
+    descricao: `Backup atômico do banco gerado (${formatarBytes(bufferGzip.length)} compactado)`,
+    dadosNovos: {
+      arquivo: nomeArquivo,
+      tamanho_original: bufferBanco.length,
+      tamanho_compactado: bufferGzip.length,
+      provedor: uploadRes.provedor,
+      modo_banco: modo
+    },
+    req
+  });
+
+  return {
+    sucesso: true,
+    arquivo: nomeArquivo,
+    tamanhoBytes: bufferGzip.length,
+    tamanhoFormatado: formatarBytes(bufferGzip.length),
+    tamanhoOriginalBytes: bufferBanco.length,
+    tamanhoOriginalFormatado: formatarBytes(bufferBanco.length),
+    taxaCompactacao: `${((1 - (bufferGzip.length / bufferBanco.length)) * 100).toFixed(1)}%`,
+    provedor: uploadRes.provedor,
+    urlDownload: uploadRes.url,
+    dataHora: agora.toISOString()
+  };
+}
+
+export async function listarBackupsSistema() {
+  const lista = await listarArquivos('backups');
+  return {
+    sucesso: true,
+    total: lista.length,
+    backups: lista.map(item => ({
+      ...item,
+      tamanhoFormatado: formatarBytes(item.tamanho)
+    }))
+  };
+}
+
+/**
+ * 5. Handler Principal Vercel Serverless / Node.js
  */
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -425,9 +458,20 @@ export default async function handler(req, res) {
 
   const url = new URL(req.url, 'http://localhost');
   const pathname = url.pathname;
+  const acaoQuery = url.searchParams.get('acao');
 
-  // ROTA 1: Telemetria de Armazenamento & Quotas (GET)
+  // ROTA 1: GET (Telemetria OU Listagem de Backups)
   if (req.method === 'GET') {
+    if (pathname.includes('/backups') || acaoQuery === 'backups') {
+      try {
+        const backups = await listarBackupsSistema();
+        return responder(res, 200, backups);
+      } catch (err) {
+        console.error('[ERRO API SISTEMA BACKUPS]', err);
+        return responder(res, 500, { error: 'Falha ao listar backups', detalhes: err.message });
+      }
+    }
+
     try {
       const metricas = await obterMetricasArmazenamento();
       return responder(res, 200, metricas);
@@ -437,11 +481,20 @@ export default async function handler(req, res) {
     }
   }
 
-  // ROTA 2: Rotinas de Manutenção (POST: otimizar ou limpar-logs)
+  // ROTA 2: POST (Rotinas de Manutenção, Otimização e Backup)
   if (req.method === 'POST') {
     try {
       const body = await parseBody(req);
-      const acao = body.acao || url.searchParams.get('acao') || (pathname.includes('otimizar') ? 'otimizar' : 'limpar_logs');
+      const acao = body.acao || acaoQuery || (pathname.includes('backup') ? 'backup' : (pathname.includes('otimizar') ? 'otimizar' : 'limpar_logs'));
+
+      if (acao === 'backup' || pathname.includes('/backup')) {
+        const resultado = await gerarBackupSistema({
+          usuarioId: body.usuario_id,
+          usuarioNome: body.usuario_nome || 'ADMINISTRADOR',
+          req
+        });
+        return responder(res, 201, resultado);
+      }
 
       if (acao === 'otimizar') {
         const resultado = await otimizarBanco();
@@ -455,7 +508,7 @@ export default async function handler(req, res) {
         return responder(res, 200, resultado);
       }
 
-      return responder(res, 400, { error: 'Ação não reconhecida. Use "otimizar" ou "limpar_logs".' });
+      return responder(res, 400, { error: 'Ação não reconhecida. Use "backup", "otimizar" ou "limpar_logs".' });
     } catch (err) {
       console.error('[ERRO API SISTEMA MANUTENCAO]', err);
       return responder(res, 500, { error: 'Falha na rotina de manutenção', detalhes: err.message });

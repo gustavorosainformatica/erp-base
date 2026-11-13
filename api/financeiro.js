@@ -369,9 +369,13 @@ export default async function handler(req, res) {
       ]);
 
       await registrarLog({
-        clienteId: body.cliente_id ? Number(body.cliente_id) : null,
-        clienteNome: body.cliente_nome || body.fornecedor_nome || 'Financeiro',
+        usuarioId: body.usuario_id || null,
+        usuarioNome: body.usuario_nome || 'SISTEMA',
+        modulo: 'FINANCEIRO',
         tipoAcao: `FINANCEIRO_NOVO_${tipo}`,
+        referenciaId: `#FIN-${info.lastInsertRowid}`,
+        descricao: `Novo título ${tipo}: ${descricao} (R$ ${valor.toFixed(2)} - Venc: ${dataVencimento})`,
+        dadosNovos: { id: info.lastInsertRowid, tipo, descricao, valor, status, dataVencimento },
         camposAlterados: ['lancamento_criado'],
         detalhes: `${tipo}: ${descricao} | R$ ${valor.toFixed(2)} | Venc: ${dataVencimento}`,
         req
@@ -424,9 +428,14 @@ export default async function handler(req, res) {
       `, [descricao, categoria, valor, dataVencimento, dataPagamento, formaPagamento, novoStatus, obs, agora.toISOString(), targetId]);
 
       await registrarLog({
-        clienteId: atual.cliente_id,
-        clienteNome: atual.cliente_nome || atual.fornecedor_nome || 'Financeiro',
+        usuarioId: body.usuario_id || null,
+        usuarioNome: body.usuario_nome || 'SISTEMA',
+        modulo: 'FINANCEIRO',
         tipoAcao: 'FINANCEIRO_ATUALIZADO',
+        referenciaId: `#FIN-${targetId}`,
+        descricao: `Lançamento financeiro #${targetId} (${descricao}) atualizado para ${novoStatus}`,
+        dadosAnteriores: atual,
+        dadosNovos: { ...atual, descricao, valor, status: novoStatus, data_pagamento: dataPagamento },
         camposAlterados: ['status', 'pagamento'],
         detalhes: `Lançamento #${targetId} (${descricao}) -> ${novoStatus} (R$ ${valor.toFixed(2)})`,
         req
@@ -438,7 +447,18 @@ export default async function handler(req, res) {
     // 4. DELETE: Excluir lançamento
     if (req.method === 'DELETE') {
       if (!idParam) return responder(res, 400, { error: 'ID obrigatório para exclusão.' });
+      const regExcluir = await get('SELECT * FROM financeiro_lancamentos WHERE id = ?', [idParam]);
       await run('DELETE FROM financeiro_lancamentos WHERE id = ?', [idParam]);
+      if (regExcluir) {
+        await registrarLog({
+          modulo: 'FINANCEIRO',
+          tipoAcao: 'FINANCEIRO_EXCLUIDO',
+          referenciaId: `#FIN-${idParam}`,
+          descricao: `Título financeiro #${idParam} (${regExcluir.descricao}) excluído`,
+          dadosAnteriores: regExcluir,
+          req
+        }).catch(() => {});
+      }
       return responder(res, 200, { success: true, id: idParam });
     }
 

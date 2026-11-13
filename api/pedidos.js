@@ -316,9 +316,13 @@ export default async function handler(req, res) {
       }
 
       await registrarLog({
-        clienteId: payload.cliente_id ? Number(payload.cliente_id) : null,
-        clienteNome: payload.cliente_nome.trim(),
+        usuarioId: payload.usuario_id || null,
+        usuarioNome: payload.usuario_nome || 'SISTEMA',
+        modulo: 'PEDIDOS',
         tipoAcao: 'NOVO_PEDIDO',
+        referenciaId: numero,
+        descricao: `Pedido comercial ${numero} cadastrado (R$ ${valorTotal.toFixed(2)} | ${statusTexto})`,
+        dadosNovos: { ...payload, numero, id: novoId },
         camposAlterados: ['pedido_criado', 'estoque_reservado', 'conta_receber_gerada'],
         detalhes: `Pedido ${numero} cadastrado (R$ ${valorTotal.toFixed(2)} | ${statusTexto}) | Itens reservados: ${itensEstoque.length}`,
         req
@@ -445,9 +449,14 @@ export default async function handler(req, res) {
       }
 
       await registrarLog({
-        clienteId: pedidoExistente.cliente_id,
-        clienteNome: pedidoExistente.cliente_nome,
+        usuarioId: payload.usuario_id || null,
+        usuarioNome: payload.usuario_nome || 'SISTEMA',
+        modulo: 'PEDIDOS',
         tipoAcao: 'ATUALIZAR_PEDIDO',
+        referenciaId: pedidoExistente.numero || `#PED-${idParam}`,
+        descricao: `Pedido ${pedidoExistente.numero || `#PED-${idParam}`} atualizado (${statusAnterior} -> ${novoStatus})`,
+        dadosAnteriores: pedidoExistente,
+        dadosNovos: payload,
         camposAlterados: campos.map(c => c.split(' =')[0]),
         detalhes: `Pedido ${pedidoExistente.numero} atualizado (${statusAnterior} -> ${novoStatus})`,
         req
@@ -478,9 +487,13 @@ export default async function handler(req, res) {
       await run('DELETE FROM pedidos WHERE id = ?', [idParam]);
 
       await registrarLog({
-        clienteId: pedidoExistente.cliente_id,
-        clienteNome: pedidoExistente.cliente_nome,
+        usuarioId: null,
+        usuarioNome: 'SISTEMA',
+        modulo: 'PEDIDOS',
         tipoAcao: 'EXCLUIR_PEDIDO',
+        referenciaId: pedidoExistente.numero || `#PED-${idParam}`,
+        descricao: `Pedido ${pedidoExistente.numero || `#PED-${idParam}`} excluído do banco e reserva liberada`,
+        dadosAnteriores: pedidoExistente,
         camposAlterados: ['pedido_excluido'],
         detalhes: `Pedido ${pedidoExistente.numero} excluído do banco e reserva liberada`,
         req
