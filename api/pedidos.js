@@ -110,35 +110,76 @@ async function identificarItensEstoque(textoItens, itensDetalhados) {
 /**
  * Aplica movimentação de estoque (Reserva, Baixa Definitiva ou Estorno)
  */
-async function movimentarEstoquePedido(itensExtraidos, operacao) {
+async function movimentarEstoquePedido(itensExtraidos, operacao, docRef = '') {
   const agora = new Date().toISOString();
   for (const item of itensExtraidos) {
-    const prod = await get('SELECT id, estoque_atual, estoque_reservado FROM produtos WHERE id = ?', [item.id]);
+    const prod = await get('SELECT id, estoque_atual, estoque_reservado, preco_custo FROM produtos WHERE id = ?', [item.id]);
     if (!prod) continue;
 
-    let fisico = parseFloat(prod.estoque_atual || 0);
+    const saldoAnteriorFisico = parseFloat(prod.estoque_atual || 0);
+    let fisico = saldoAnteriorFisico;
     let reservado = Math.max(0, parseFloat(prod.estoque_reservado || 0));
+
+    let tipoKardex = null;
+    let motivoKardex = null;
+    let obsKardex = '';
 
     if (operacao === 'RESERVAR') {
       reservado += item.qtd;
     } else if (operacao === 'BAIXAR_DIRETO') {
       fisico = Math.max(0, fisico - item.qtd);
+      tipoKardex = 'SAIDA';
+      motivoKardex = 'VENDA_PEDIDO';
+      obsKardex = `Baixa de estoque por faturamento direto (${docRef || 'Pedido'})`;
     } else if (operacao === 'CONVERTER_RESERVA_EM_BAIXA') {
       reservado = Math.max(0, reservado - item.qtd);
       fisico = Math.max(0, fisico - item.qtd);
+      tipoKardex = 'SAIDA';
+      motivoKardex = 'VENDA_PEDIDO';
+      obsKardex = `Baixa de estoque por envio/entrega de pedido (${docRef || 'Pedido'})`;
     } else if (operacao === 'LIBERAR_RESERVA') {
       reservado = Math.max(0, reservado - item.qtd);
     } else if (operacao === 'ESTORNAR_BAIXA_PARA_RESERVA') {
       fisico += item.qtd;
       reservado += item.qtd;
+      tipoKardex = 'ENTRADA';
+      motivoKardex = 'DEVOLUCAO_CLIENTE';
+      obsKardex = `Estorno de baixa para reserva (${docRef || 'Pedido'})`;
     } else if (operacao === 'ESTORNAR_BAIXA_TOTAL') {
       fisico += item.qtd;
+      tipoKardex = 'ENTRADA';
+      motivoKardex = 'DEVOLUCAO_CLIENTE';
+      obsKardex = `Estorno de baixa total por cancelamento (${docRef || 'Pedido'})`;
     }
 
     await run(
       'UPDATE produtos SET estoque_atual = ?, estoque_reservado = ?, data_atualizacao = ? WHERE id = ?',
       [fisico, reservado, agora, prod.id]
     );
+
+    if (tipoKardex) {
+      try {
+        await run(`
+          INSERT INTO estoque_movimentacoes (
+            produto_id, tipo, origem, motivo, quantidade,
+            saldo_anterior, saldo_posterior, custo_unitario,
+            documento_referencia, observacoes, operador_nome, data_movimentacao
+          ) VALUES (?, ?, 'VENDA', ?, ?, ?, ?, ?, ?, ?, 'Sistema de Pedidos', datetime('now', 'localtime'))
+        `, [
+          prod.id,
+          tipoKardex,
+          motivoKardex,
+          item.qtd,
+          saldoAnteriorFisico,
+          fisico,
+          prod.preco_custo || 0,
+          docRef || 'PEDIDO',
+          obsKardex
+        ]);
+      } catch (errKardex) {
+        console.warn('[KARDEX PEDIDO AVISO]', errKardex.message);
+      }
+    }
   }
 }
 
@@ -279,9 +320,9 @@ export default async function handler(req, res) {
       const itensEstoque = await identificarItensEstoque(payload.itens, payload.itens_detalhados);
       if (itensEstoque.length > 0) {
         if (isStatusPendente(status)) {
-          await movimentarEstoquePedido(itensEstoque, 'RESERVAR');
+          await movimentarEstoquePedido(itensEstoque, 'RESERVAR', numero);
         } else if (isStatusConcluido(status)) {
-          await movimentarEstoquePedido(itensEstoque, 'BAIXAR_DIRETO');
+          await movimentarEstoquePedido(itensEstoque, 'BAIXAR_DIRETO', numero);
         }
       }
 
@@ -316,13 +357,24 @@ export default async function handler(req, res) {
       }
 
       await registrarLog({
-        usuarioId: payload.usuario_id || null,
-        usuarioNome: payload.usuario_nome || 'SISTEMA',
+        usuarioId: payload.usuario_id ? Number(payload.usuario_id) : null,
+        usuarioNome: payload.usuario_nome || 'ADMINISTRADOR',
         modulo: 'PEDIDOS',
-        tipoAcao: 'NOVO_PEDIDO',
+        tipoAcao: 'CRIACAO',
         referenciaId: numero,
-        descricao: `Pedido comercial ${numero} cadastrado (R$ ${valorTotal.toFixed(2)} | ${statusTexto})`,
-        dadosNovos: { ...payload, numero, id: novoId },
+        descricao: `Pedido ${numero} cadastrado para ${payload.cliente_nome.trim()} (R$ ${valorTotal.toFixed(2)} | ${statusTexto}) | Itens reservados: ${itensEstoque.length}`,
+        dadosNovos: {
+          id: novoId,
+          numero,
+          cliente_id: payload.cliente_id ? Number(payload.cliente_id) : null,
+          cliente_nome: payload.cliente_nome.trim(),
+          valor_total: valorTotal,
+          status,
+          status_texto: statusTexto,
+          itens: payload.itens
+        },
+        clienteId: payload.cliente_id ? Number(payload.cliente_id) : null,
+        clienteNome: payload.cliente_nome.trim(),
         camposAlterados: ['pedido_criado', 'estoque_reservado', 'conta_receber_gerada'],
         detalhes: `Pedido ${numero} cadastrado (R$ ${valorTotal.toFixed(2)} | ${statusTexto}) | Itens reservados: ${itensEstoque.length}`,
         req
@@ -417,17 +469,18 @@ export default async function handler(req, res) {
       // Transição de Estoque quando o status muda
       if (statusAnterior !== novoStatus) {
         const itensEstoque = await identificarItensEstoque(payload.itens || pedidoExistente.itens, payload.itens_detalhados);
+        const pedidoNumeroRef = pedidoExistente?.numero || (`#PED-${idParam}`);
         if (itensEstoque.length > 0) {
           if (isStatusPendente(statusAnterior) && isStatusConcluido(novoStatus)) {
-            await movimentarEstoquePedido(itensEstoque, 'CONVERTER_RESERVA_EM_BAIXA');
+            await movimentarEstoquePedido(itensEstoque, 'CONVERTER_RESERVA_EM_BAIXA', pedidoNumeroRef);
           } else if (isStatusPendente(statusAnterior) && novoStatus === 'CANCELADO') {
-            await movimentarEstoquePedido(itensEstoque, 'LIBERAR_RESERVA');
+            await movimentarEstoquePedido(itensEstoque, 'LIBERAR_RESERVA', pedidoNumeroRef);
           } else if (isStatusConcluido(statusAnterior) && isStatusPendente(novoStatus)) {
-            await movimentarEstoquePedido(itensEstoque, 'ESTORNAR_BAIXA_PARA_RESERVA');
+            await movimentarEstoquePedido(itensEstoque, 'ESTORNAR_BAIXA_PARA_RESERVA', pedidoNumeroRef);
           } else if (isStatusConcluido(statusAnterior) && novoStatus === 'CANCELADO') {
-            await movimentarEstoquePedido(itensEstoque, 'ESTORNAR_BAIXA_TOTAL');
+            await movimentarEstoquePedido(itensEstoque, 'ESTORNAR_BAIXA_TOTAL', pedidoNumeroRef);
           } else if (statusAnterior === 'CANCELADO' && isStatusPendente(novoStatus)) {
-            await movimentarEstoquePedido(itensEstoque, 'RESERVAR');
+            await movimentarEstoquePedido(itensEstoque, 'RESERVAR', pedidoNumeroRef);
           }
         }
 
@@ -449,15 +502,17 @@ export default async function handler(req, res) {
       }
 
       await registrarLog({
-        usuarioId: payload.usuario_id || null,
-        usuarioNome: payload.usuario_nome || 'SISTEMA',
+        usuarioId: payload.usuario_id ? Number(payload.usuario_id) : null,
+        usuarioNome: payload.usuario_nome || 'ADMINISTRADOR',
         modulo: 'PEDIDOS',
-        tipoAcao: 'ATUALIZAR_PEDIDO',
-        referenciaId: pedidoExistente.numero || `#PED-${idParam}`,
-        descricao: `Pedido ${pedidoExistente.numero || `#PED-${idParam}`} atualizado (${statusAnterior} -> ${novoStatus})`,
+        tipoAcao: statusAnterior !== novoStatus ? 'STATUS_CHANGE' : 'EDICAO',
+        referenciaId: pedidoExistente.numero,
+        descricao: `Pedido ${pedidoExistente.numero} atualizado (${statusAnterior} -> ${novoStatus})`,
         dadosAnteriores: pedidoExistente,
-        dadosNovos: payload,
+        dadosNovos: { ...pedidoExistente, ...payload, status: novoStatus, status_texto: statusTexto },
         camposAlterados: campos.map(c => c.split(' =')[0]),
+        clienteId: pedidoExistente.cliente_id,
+        clienteNome: pedidoExistente.cliente_nome,
         detalhes: `Pedido ${pedidoExistente.numero} atualizado (${statusAnterior} -> ${novoStatus})`,
         req
       }).catch(() => {});
@@ -488,12 +543,14 @@ export default async function handler(req, res) {
 
       await registrarLog({
         usuarioId: null,
-        usuarioNome: 'SISTEMA',
+        usuarioNome: 'ADMINISTRADOR',
         modulo: 'PEDIDOS',
-        tipoAcao: 'EXCLUIR_PEDIDO',
-        referenciaId: pedidoExistente.numero || `#PED-${idParam}`,
-        descricao: `Pedido ${pedidoExistente.numero || `#PED-${idParam}`} excluído do banco e reserva liberada`,
+        tipoAcao: 'EXCLUSAO',
+        referenciaId: pedidoExistente.numero,
+        descricao: `Pedido ${pedidoExistente.numero} excluído do banco e reserva liberada`,
         dadosAnteriores: pedidoExistente,
+        clienteId: pedidoExistente.cliente_id,
+        clienteNome: pedidoExistente.cliente_nome,
         camposAlterados: ['pedido_excluido'],
         detalhes: `Pedido ${pedidoExistente.numero} excluído do banco e reserva liberada`,
         req

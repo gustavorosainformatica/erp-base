@@ -259,6 +259,12 @@ export default async function handler(req, res) {
         custo_unitario
       } = body;
 
+      const ORIGENS_VALIDAS = ['COMPRA', 'VENDA', 'AJUSTE_MANUAL', 'INVENTARIO', 'PRODUCAO', 'LOCACAO'];
+      let origemNormalizada = String(origem || 'AJUSTE_MANUAL').toUpperCase().trim();
+      if (!ORIGENS_VALIDAS.includes(origemNormalizada)) {
+        origemNormalizada = 'AJUSTE_MANUAL';
+      }
+
       // 1. Validações de Entrada
       if (!produto_id) {
         return responder(res, 400, { error: 'O campo produto_id é obrigatório.' });
@@ -301,7 +307,7 @@ export default async function handler(req, res) {
         saldoPosterior = saldoAnterior - qtdNum;
       }
 
-      const custoFinal = (custo_unitario !== undefined && custo_unitario !== null) ? Number(custo_unitario) : (produto.preco_custo || 0);
+      const custoFinal = (custo_unitario !== undefined && custo_unitario !== null && !isNaN(Number(custo_unitario))) ? Number(custo_unitario) : (produto.preco_custo || 0);
 
       // 4. Gravação Atômica: Atualização do Produto + Registro na Ficha Kardex
       await run(`
@@ -319,7 +325,7 @@ export default async function handler(req, res) {
       `, [
         produto_id,
         tipoNormalizado,
-        origem,
+        origemNormalizada,
         motivo,
         qtdNum,
         saldoAnterior,
@@ -333,15 +339,15 @@ export default async function handler(req, res) {
 
       // Registro de Auditoria Global
       await registrarLog({
-        usuarioId: operadorId,
-        usuarioNome: operadorNome || 'SISTEMA',
+        usuarioId: operadorId ? Number(operadorId) : null,
+        usuarioNome: operadorNome || 'ADMINISTRADOR',
         modulo: 'ESTOQUE',
-        tipoAcao: `ESTOQUE_${tipoNormalizado}`,
-        referenciaId: produto.codigo_sku || `#PROD-${produto.id}`,
-        descricao: `Movimentação de ${tipoNormalizado}: ${produto.nome} (${saldoAnterior} -> ${saldoPosterior})`,
-        dadosAnteriores: { estoque_atual: saldoAnterior },
-        dadosNovos: { estoque_atual: saldoPosterior, movimentacao: { tipo: tipoNormalizado, quantidade: qtdNum, motivo } },
-        camposAlterados: ['estoque_atual'],
+        tipoAcao: tipoNormalizado === 'ENTRADA' ? 'ENTRADA_ESTOQUE' : 'SAIDA_ESTOQUE',
+        referenciaId: produto.codigo_sku || `PROD #${produto.id}`,
+        descricao: `Estoque ${tipoNormalizado}: ${produto.nome} (${saldoAnterior} -> ${saldoPosterior} un) | Motivo: ${motivo}`,
+        dadosAnteriores: { produto_id: produto.id, estoque_atual: saldoAnterior },
+        dadosNovos: { produto_id: produto.id, estoque_atual: saldoPosterior, movimentado: qtdNum, tipo: tipoNormalizado },
+        camposAlterados: `estoque_atual: ${saldoAnterior} -> ${saldoPosterior} (${tipoNormalizado === 'ENTRADA' ? '+' : '-'}${qtdNum})`,
         detalhes: `Motivo: ${motivo} | Ref: ${documento_referencia || 'N/A'} | Obs: ${observacoes || 'N/A'}`,
         req
       });

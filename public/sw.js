@@ -1,11 +1,19 @@
-// Service Worker - ERP Gestor Pro PWA
+// Service Worker - Mis Sueños ERP PWA
 // v30: Elimina cache agressivo de HTML e força Network-Only para navegação local,
 // garantindo que qualquer alteração apareça imediatamente sem necessidade de Control + F5.
 // v31: Expurgar cache agressivo, alinhar controles de janelas flutuantes e destravar redimensionamento
 // v56: Espelho do Pedido A4 (Layout Comercial) & Romaneio de Galpão (Checklist de Expedição)
+// v57: Módulo Universal de Estoque & Ficha Kardex com Rastreabilidade Total
+// v58: Correção na persistência de novos clientes e sincronização dinâmica de contadores
 // v59: Interface Responsiva Mobile-First (Card View, Bottom Nav 5 abas e Fullscreen Modal)
 // v60: Sanfona Retrátil de KPIs Mobile (Opção A) e Cabeçalho Unificado com Voltar ao Painel
-const CACHE_NAME = 'missuenos-pwa-v60';
+// v61: Correção estrutural do DOM mobile, Cards de Produtos/Estoque e isolamento de layout
+// v62: Correção de z-index e rodapé fixo dos modais Bottom Sheet acima da bottom-nav no celular
+// v63: Limpeza da barra superior mobile (oculta nova janela, Ctrl+K, breadcrumb Windows e troca estrela por lupa)
+// v64: Correção do botão Abrir (Pedidos) e Ficha (Clientes) nos cards mobile
+// v65: Habilitação de rolagem (.erp-scrollable-area) na tabela de Pedidos no desktop
+// v66: Tabela de Pedidos padrão moderno (chip compacto de Itens + filtro STATUS no topo)
+const CACHE_NAME = 'erp-base-pwa-v66';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/favicon.ico',

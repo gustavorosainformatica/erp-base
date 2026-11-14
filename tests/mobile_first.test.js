@@ -93,6 +93,10 @@ test('MOBILE TICKET 03: Containers de cards mobile existem no index.html', () =>
     htmlContent.includes('mobile-clientes-cards'),
     'index.html deve conter o container id="mobile-clientes-cards"'
   );
+  assert.ok(
+    htmlContent.includes('mobile-produtos-cards'),
+    'index.html deve conter o container id="mobile-produtos-cards"'
+  );
 });
 
 test('MOBILE TICKET 03: mobile.css contém estilos para Card View e alternância com tabelas', () => {
@@ -109,13 +113,17 @@ test('MOBILE TICKET 03: mobile.css contém estilos para Card View e alternância
   );
 });
 
-test('MOBILE TICKET 03: Função renderCardsPedidosMobile existe e gera cards estruturados', () => {
+test('MOBILE TICKET 03: Funções renderCardsPedidosMobile e renderCardsProdutosMobile existem e geram cards estruturados', () => {
   const htmlPath = path.join(rootDir, 'public', 'index.html');
   const htmlContent = fs.readFileSync(htmlPath, 'utf8');
 
   assert.ok(
     htmlContent.includes('function renderCardsPedidosMobile') || htmlContent.includes('renderCardsPedidosMobile ='),
     'index.html deve conter a função renderCardsPedidosMobile'
+  );
+  assert.ok(
+    htmlContent.includes('function renderCardsProdutosMobile') || htmlContent.includes('renderCardsProdutosMobile ='),
+    'index.html deve conter a função renderCardsProdutosMobile'
   );
 });
 
@@ -143,7 +151,7 @@ test('MOBILE TICKET 04: mobile.css adapta #modal-pedido para Fullscreen Modal co
   );
 });
 
-test('MOBILE TICKET 05: mobile.css estiliza modais rápidos como Bottom Sheet com alça e animação', () => {
+test('MOBILE TICKET 05: mobile.css estiliza modais rápidos como Bottom Sheet acima da bottom-nav com alça e animação', () => {
   const cssPath = path.join(rootDir, 'public', 'mobile.css');
   const cssContent = fs.readFileSync(cssPath, 'utf8');
 
@@ -154,6 +162,10 @@ test('MOBILE TICKET 05: mobile.css estiliza modais rápidos como Bottom Sheet co
   assert.ok(
     cssContent.includes('slideUpSheetMobile') || cssContent.includes('keyframes slideUp'),
     'mobile.css deve conter animação de subida suave do Bottom Sheet'
+  );
+  assert.ok(
+    cssContent.includes('99995'),
+    'mobile.css deve garantir z-index superior à bottom-nav para modais Bottom Sheet'
   );
 });
 
@@ -180,16 +192,86 @@ test('MOBILE TICKET 06: Não-regressão desktop garantida (mobile-cards-containe
   );
 });
 
-test('MOBILE TICKET 07: Service Worker atualizado para missuenos-pwa-v59/v60 e inclui mobile.css', () => {
+test('MOBILE TICKET 07: Service Worker atualizado para v66 e inclui mobile.css', () => {
   const swPath = path.join(rootDir, 'public', 'sw.js');
   const swContent = fs.readFileSync(swPath, 'utf8');
 
   assert.ok(
-    swContent.includes('missuenos-pwa-v59') || swContent.includes('missuenos-pwa-v60'),
-    'sw.js deve conter a versão missuenos-pwa-v59 ou v60'
+    swContent.includes('erp-base-pwa') || swContent.includes('missuenos-pwa-v65'),
+    'sw.js deve conter a versão atualizada missuenos-pwa-v66'
   );
   assert.ok(
     swContent.includes('/mobile.css'),
     'sw.js deve incluir /mobile.css na lista de STATIC_ASSETS'
   );
+});
+
+test('PEDIDOS DESKTOP: Seletor de filtro STATUS no topo e coluna Itens compacta implementados', () => {
+  const htmlPath = path.join(rootDir, 'public', 'index.html');
+  const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+
+  assert.ok(
+    htmlContent.includes('id="filtro-status-pedidos-topo"'),
+    'Deve existir o seletor id="filtro-status-pedidos-topo" no topo da tabela de pedidos'
+  );
+  assert.ok(
+    htmlContent.includes('AGUARDANDO_PAGAMENTO') && htmlContent.includes('EM_SEPARACAO') && htmlContent.includes('AGUARDANDO_ENVIO'),
+    'Seletor de status deve respeitar as etapas do funil do galpão'
+  );
+});
+
+test('MOBILE TICKET 10: Botões Abrir e Ficha dos cards mobile chamam diretamente abrirModalEditarPedido/Cliente', () => {
+  const htmlPath = path.join(rootDir, 'public', 'index.html');
+  const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+
+  assert.ok(
+    htmlContent.includes('abrirModalEditarPedido('),
+    'Botão Abrir nos cards de pedidos deve chamar abrirModalEditarPedido diretamente'
+  );
+  assert.ok(
+    htmlContent.includes('abrirModalEditarCliente('),
+    'Botão Ficha nos cards de clientes deve chamar abrirModalEditarCliente diretamente'
+  );
+});
+
+test('MOBILE TICKET 09: Barra superior mobile oculta elementos exclusivos de desktop (nova janela, Ctrl+K e breadcrumb Windows)', () => {
+  const cssPath = path.join(rootDir, 'public', 'mobile.css');
+  const cssContent = fs.readFileSync(cssPath, 'utf8');
+
+  assert.ok(
+    cssContent.includes('#btn-top-nova-janela') && cssContent.includes('.kbd-shortcut') && cssContent.includes('#topbar-windows-nav'),
+    'mobile.css deve ocultar #btn-top-nova-janela, .kbd-shortcut e #topbar-windows-nav no mobile'
+  );
+});
+
+test('MOBILE TICKET 08: Integridade estrutural do HTML (divs balanceadas nos módulos principais)', () => {
+  const htmlPath = path.join(rootDir, 'public', 'index.html');
+  const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+
+  const verificarBalanceamentoModulo = (idModulo) => {
+    const startTag = `<main class="erp-content" id="${idModulo}"`;
+    const idxStart = htmlContent.indexOf(startTag);
+    assert.ok(idxStart !== -1, `Módulo ${idModulo} deve existir no index.html`);
+
+    const idxEnd = htmlContent.indexOf('</main>', idxStart);
+    assert.ok(idxEnd !== -1, `Módulo ${idModulo} deve possuir tag de fechamento </main>`);
+
+    const trecho = htmlContent.slice(idxStart, idxEnd);
+    const aberturas = (trecho.match(/<div\b/gi) || []).length;
+    const fechamentos = (trecho.match(/<\/div>/gi) || []).length;
+
+    assert.equal(
+      aberturas,
+      fechamentos,
+      `O módulo ${idModulo} possui desbalanceamento de divs: ${aberturas} abertas vs ${fechamentos} fechadas`
+    );
+    assert.ok(
+      trecho.includes('erp-scrollable-area'),
+      `O módulo ${idModulo} deve possuir container .erp-scrollable-area para rolagem dos registros`
+    );
+  };
+
+  verificarBalanceamentoModulo('modulo-clientes-conteudo');
+  verificarBalanceamentoModulo('modulo-produtos-conteudo');
+  verificarBalanceamentoModulo('modulo-pedidos-conteudo');
 });
