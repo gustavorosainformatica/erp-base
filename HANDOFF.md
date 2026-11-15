@@ -1,91 +1,71 @@
 # Registro de Transição de Contexto (Handoff)
 
-**Data / Hora:** 10 de Novembro de 2026 — 00:45 (BRT)  
-**Objetivo da Sessão:** Concepção, especificação técnica, decomposição em tickets e implementação completa do módulo de **DRE (Demonstração do Resultado do Exercício) Analítico** e **Fluxo de Caixa Projetado** no Mis Sueños ERP com sincronização na matriz neutra ERP Base e deploy na nuvem.
+**Data / Hora:** 15 de Novembro de 2026 — 19:48 (BRT)  
+**Objetivo da Sessão:** Implementação completa da funcionalidade de **Múltiplas Tabelas de Preço (Varejo vs. Atacado) & Motor Híbrido de Vendas** (Tickets 01 a 06 do fluxo Matt Pocock), com extensão de schema DDL idempotente, persistência REST na API, suíte TDD unitária e de integração (192 testes aprovados), UI moderna com ergonomia de teclado, sincronização tríplice nos 3 repositórios (`MisSuenos`, `erp-base` e `MisSuenos-Dev`) e deploy auditado na Vercel com `HTTP 200 OK`.
 
 ---
 
-## 1. O que foi Concluído
+## 1. O que foi Concluído nesta Sessão
 
-1. **Validação e Sabatina Técnica (/grill-me):**
-   - Sabatina interativa concluída definindo visões temporal diária (30 dias), mensal (6 meses) e híbrida.
-   - Decisão arquitetural de disponibilização dupla (Opção A + B): abas integradas no módulo `💰 Financeiro` e tela executiva na `📑 Central de Relatórios`.
-   - Criação e aprovação do modelo visual interativo (`MODELOS_DRE_FLUXO_CAIXA.html`).
-
-2. **Especificação Técnica & Tickets (/to-spec & /to-tickets):**
-   - Criação formal da especificação contábil e de projeção (`SPEC_DRE_FLUXO_CAIXA.md`).
-   - Fatiamento ordenado em 5 tickets atômicos e testáveis (`TICKETS_DRE_FLUXO_CAIXA.md`).
-
-3. **Motor Contábil do DRE Analítico (Ticket 1):**
-   - Função pura `calcularDreAnalitico` em `lib/calculos_erp.js`.
-   - Modos Integrado (pedidos faturados + CMV real item a item cruzado com o catálogo de produtos) e Financeiro Puro (lançamentos contábeis por categoria).
-   - Apuração de Receita Bruta, Deduções de Frete, Receita Líquida, CMV, Lucro Bruto, Margem Bruta (%), Despesas por Categoria, Lucro Líquido Real e Margem Líquida (%).
-   - Blindagem anti-duplicidade para lançamentos financeiros vinculados a `pedido_id`.
-
-4. **Motor de Projeção Temporal do Fluxo de Caixa (Ticket 2):**
-   - Função pura `projetarFluxoCaixa` em `lib/calculos_erp.js`.
-   - Projeção de saldo contínuo no tempo dia a dia e consolidação mensal.
-   - Suporte a recebimentos à vista e parcelados, saídas do financeiro e despesas fixas recorrentes (`recorrente: true`) replicadas automaticamente nos meses subsequentes.
-   - Detecção proativa de saldo negativo (`isNegativo: true`) com sinalização da data e do menor saldo projetado.
-
-5. **Interface Operacional no Módulo Financeiro (Ticket 3):**
-   - Sub-abas segmentadas no topo de `#modulo-financeiro-conteudo`:
-     - `[ 📋 Contas a Pagar & Receber ]`: Tabela e KPIs operacionais originais.
-     - `[ 📊 DRE Analítico (Resultado) ]`: Controles de período rápido, alternador de modo (Integrado vs Financeiro), KPIs e tabela em cascata no padrão escuro.
-     - `[ 📈 Fluxo de Caixa Projetado ]`: Linha do tempo horizontal diária (scrollable cards com destaque em vermelho para dias descobertos), tabela mensal de 6 meses e banner de alerta de furo de caixa.
-   - Adicionado checkbox de `🔁 Despesa Recorrente Mensal (Fixa no Fluxo de Caixa Projetado)` no modal `#modal-lancamento-financeiro`.
-
-6. **Central de Relatórios, Impressão A4 & Exportação Excel (Ticket 4):**
-   - Vinculação dos relatórios `dre_gerencial` e `fluxo_caixa_projetado` na API `api/relatorios.js` e na Central de Relatórios.
-   - Botão de Impressão A4 limpa corporativa (`@media print`) sem menus e sem elementos de navegação.
-   - Botão de Exportação Excel (`.csv`) formatado com UTF-8 BOM e delimitador `;`.
-
-7. **Validação Global, Sincronização Tríplice & Deploy na Nuvem (Ticket 5):**
-   - **48 testes unitários passando com 100% de sucesso** em ~600ms (`tests/dre_fluxo_caixa.test.js` e `tests/dre_relatorios_api.test.js`).
-   - Sincronização e push efetuados nos 3 repositórios (`MisSuenos`, `MisSuenos-Dev` e `erp-base`).
-   - Auditoria HTTP realizada na Vercel confirmando status `200 OK`, `Age: 0` e elementos no ar.
+1. **Múltiplas Tabelas de Preço (Varejo vs. Atacado) & Motor Híbrido:**
+   - **Ticket 01 (Schema DDL & Banco):** Criado `scripts/migrar_schema_tabelas_preco.js` com DDL idempotente adicionando `preco_atacado REAL`, `qtd_minima_atacado REAL DEFAULT 5.0` em `produtos`, `tabela_preco TEXT DEFAULT 'VAREJO'` em `clientes`, e `tabela_preco_aplicada TEXT DEFAULT 'VAREJO'`, `itens_detalhados TEXT` em `pedidos`.
+   - **Ticket 02 (Endpoints da API REST):** Atualizados `api/produtos.js`, `api/clientes.js` e `api/pedidos.js` (POST e PUT) para persistir e retornar todos os novos campos.
+   - **Ticket 03 (Motor Híbrido & TDD):** Implementada a função universal `resolverPrecoItem({ produto, cliente, tabelaPedido, qtd })` em `lib/calculos_erp.js` e `public/index.html` com suporte a 3 gatilhos (perfil do cliente, seletor manual no pedido ou gatilho por quantidade $\ge$ `qtd_minima_atacado`) e fallback automático seguro para `preco_venda` com flag visual se o item não tiver atacado cadastrado. Criada suíte `tests/tabelas_preco.test.js` com 7 testes cobrindo todos os cenários.
+   - **Ticket 04 (UI Formulários de Cadastro):**
+     * Modal de Produto (`#modal-produto`): adicionados campos `Preço Atacado (R$)` e `Qtd Mín Atac` com remoção nativa de spinners e foco por Tab. Exibição de subtexto dourado de atacado no catálogo do estoque.
+     * Modal de Cliente (`#modal-cliente`): adicionado seletor `🏷️ TABELA DE PREÇO: [ VAREJO (PADRÃO) / ATACADO ]`.
+   - **Ticket 05 (Checkout & Pedidos Reativos):**
+     * Modal de Pedidos (`#modal-pedido`): seletor `🏷️ TABELA: [ VAREJO / ATACADO ]` na toolbar; sincronização automática com o cliente selecionado; indicação de atacado no Combobox de produtos; conversão em tempo real ao alterar a quantidade ($\ge$ mínima); badges visuais `🏷️ ATACADO` e `⚠️ VAREJO (FALLBACK)`.
+   - **Ticket 06 (Sincronização Tríplice & Deploy):**
+     * `MisSuenos` (Produção): Commit `7a057e4` enviado ao GitHub e auditado na Vercel com `HTTP 200 OK`.
+     * `erp-base` (Matriz Universal Neutra): Commit `9ddde9c` enviado ao GitHub com 192 testes passando.
+     * `MisSuenos-Dev` (Sandbox): Commit `c019020` enviado ao GitHub com 192 testes passando.
 
 ---
 
-## 2. Arquivos Modificados / Criados
+## 2. Status dos Ambientes e Repositórios
 
-- `lib/calculos_erp.js` - Implementação dos motores contábeis `calcularDreAnalitico` e `projetarFluxoCaixa` com suporte a dados de pedidos em JSON, array e texto legado.
-- `lib/db.js` - Adição da coluna `recorrente INTEGER DEFAULT 0` na tabela `financeiro_lancamentos` e migrações DDL seguras (Turso e SQLite local).
-- `api/financeiro.js` - Gravação do campo `recorrente` em lançamentos e enriquecimento no retorno JSON.
-- `api/relatorios.js` - Integração analítica com os motores contábeis para servir os relatórios `dre_gerencial` e `fluxo_caixa_projetado`.
-- `public/index.html` - Sub-abas segmentadas no financeiro, visualização DRE em cascata, linha do tempo diária de caixa, checkbox de recorrência no modal, estilos e regras de impressão A4.
-- `tests/dre_fluxo_caixa.test.js` - 7 testes unitários TDD cobrindo DRE Integrado, Financeiro puro, parcelas e despesas recorrentes.
-- `tests/dre_relatorios_api.test.js` - 2 testes de integração validando apurações e alertas de furo de caixa.
-- `HANDOFF.md` - Registro estruturado de transição e histórico do projeto.
+- **Produção (Vercel):** [https://missuenos.vercel.app](https://missuenos.vercel.app) — `HTTP 200 OK` auditado no commit `7a057e4`.
+- **Matriz Neutra (`d:\projetos-agy\erp-base`):** Sincronizada no commit `9ddde9c`.
+- **Sandbox (`D:\projetos-agy\sandbox\MisSuenos-Dev`):** Sincronizada no commit `c019020`.
+- **Suíte de Testes Automatizados:** 192 testes passando com 100% de sucesso (0 falhas).
 
 ---
 
-## 3. Estado Atual e Decisões Críticas
+## 3. Arquivos Modificados / Criados
 
-- **Repositórios e Versões Ativas:**
-  - `d:\projetos-agy\MisSuenos` (Produção): commit `d6be42d` na branch `main` ➔ 100% limpo e atualizado.
-  - `d:\projetos-agy\MisSuenos-Dev` (Desenvolvimento): commit `f1f488a` na branch `dev` ➔ 100% limpo e atualizado.
-  - `d:\projetos-agy\erp-base` (Template Neutro): commit `3d249fb` na branch `main` ➔ 100% limpo e atualizado.
-- **Ambiente de Produção Ativo:**
-  - URL: [https://missuenos.vercel.app](https://missuenos.vercel.app) (Status `200`, `Age: 0`, ETag verificada).
-- **Decisões Técnicas Validadas:**
-  - No Modo Integrado, o frete é deduzido da receita líquida e o CMV é apurado multiplicando a quantidade real de cada item pelo `preco_custo` do catálogo de produtos.
-  - Vendas com `pedido_id` no financeiro são tratadas com blindagem anti-duplicidade para evitar inflar o faturamento.
-  - O Fluxo de Caixa sinaliza o dia exato do menor saldo projetado com destaque em vermelho (`#f87171`) e banner de aviso visual caso haja furo de caixa.
-  - A tecla `Tab` circula exclusivamente em campos editáveis (`tabindex="-1"` em abas, botões de ação e checkboxes secundários).
+- `scripts/migrar_schema_tabelas_preco.js` - Script de migração de schema com checagem idempotente de colunas.
+- `lib/db.js` - DDLs das tabelas `produtos`, `clientes` e `pedidos` atualizados com as novas colunas e migrações.
+- `lib/calculos_erp.js` - Motor de precificação híbrida `resolverPrecoItem`.
+- `api/produtos.js` - Suporte a `preco_atacado` e `qtd_minima_atacado` no POST e PUT.
+- `api/clientes.js` - Suporte a `tabela_preco` no POST e PUT.
+- `api/pedidos.js` - Suporte a `tabela_preco_aplicada` e `itens_detalhados` no POST e PUT.
+- `public/index.html` - Modais de produto, cliente e pedido com reatividade, ergonomia e badges de atacado.
+- `tests/tabelas_preco.test.js` - Suíte TDD cobrindo todos os cenários da especificação.
+- `tests/clientes_api.test.js` - Testes de persistência de `tabela_preco`.
+- `docs/specs/SPEC-tabelas-preco-varejo-atacado.md` - Especificação técnica formal aprovada.
+- `docs/tickets/TICKETS-tabelas-preco-varejo-atacado.md` - Planejamento dos tickets de execução.
+- `HANDOFF.md` - Atualização do registro de continuidade de contexto.
+
+## 3. Estado Atual dos Ambientes
+
+- **Produção (Vercel):** [https://missuenos.vercel.app](https://missuenos.vercel.app) — `HTTP 200 OK` auditado no commit `5b5da09`.
+- **Repositório MisSuenos:** Branch `main` limpa e atualizada com `origin/main`.
+- **Repositório ERP Base:** Branch `main` limpa e atualizada com `origin/main` (commit `623169b`).
+- **Repositório Sandbox Dev:** Branch `dev` limpa e atualizada com `origin/dev` (commit `241000b`).
+- **Testes Automatizados:** 183 testes passando no `MisSuenos`, 184 testes passando no `erp-base`.
 
 ---
 
-## 4. Próximos Passos Imediatos
+## 4. Próximos Passos Sugeridos
 
-- [ ] Executar `/code-review` para auditoria técnica detalhada de código, segurança e desempenho.
-- [ ] Planejar o próximo módulo do sistema (ex: Conciliação Bancária OFX, Emissão Fiscal de NF-e em Produção ou Expedição/Etiquetas dos Correios).
-- [ ] Realizar testes operacionais simulando lançamentos de contas fixas reais (aluguel, contador, luz) e observando a projeção nos próximos 30 dias.
+- [ ] Avaliar se outros módulos (ex: Financeiro / Pedidos) possuem métricas que possam se beneficiar do padrão de particionamento disjunto nos menus de contexto.
+- [ ] Monitorar a resposta do usuário final no manuseio da Central de Categorias e cotações ao vivo.
+- [ ] Dar prosseguimento às próximas fases do Roadmap conforme demanda de Gustavo.
 
 ---
 
 ## 5. Cuidados e Observações Técnicas
 
-- **Cota Serverless Vercel:** Mantida a arquitetura unificada com dispatcher central único (`api/index.js`), consumindo apenas 1 função serverless e respeitando com folga o limite Hobby de 12 funções.
-- **Isomorfismo dos Cálculos:** As funções puras `calcularDreAnalitico` e `projetarFluxoCaixa` operam tanto no backend Node.js (testes e relatórios) quanto no frontend do navegador, sem dependência de bibliotecas externas.
-- **Sincronização Tríplice:** Qualquer alteração futura deve continuar sendo espelhada em `MisSuenos-Dev` e `erp-base` com validação de testes antes de cada deploy.
+- **Zero-PII:** Manter sempre o isolamento estrito de dados sensíveis e nunca comitar carteiras reais em `public/dados_clientes.js`.
+- **Protocolo de Hashtag (`#`):** Diretrizes globais decretadas com `#` devem continuar sendo gravadas diretamente no `~/.gemini/GEMINI.md`.
