@@ -5126,9 +5126,39 @@
       }
     }
 
+    /* ========================================================
+       BLINDAGEM VISUAL: NÃO MOSTRAR A JANELA DO SISTEMA POR TRÁS DO LOGIN
+       ======================================================== */
+    body.nao-autenticado .erp-sidebar,
+    body.nao-autenticado .erp-main-wrapper,
+    body.nao-autenticado .erp-topbar,
+    body.nao-autenticado #sidebar-hover-backdrop,
+    body.nao-autenticado #topbar-windows-nav,
+    body.nao-autenticado .erp-scrollable-area {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    #modal-auth-login,
+    #modal-trocar-senha-login,
+    #modal-troca-senha-obrigatoria {
+      background: #070d18 !important;
+      background: radial-gradient(circle at 50% 35%, #0f1c34 0%, #070d18 80%) !important;
+    }
+
+    #auth-seletor-modo-container {
+      display: none !important;
+    }
+    #tab-modo-senha.modo-oculto,
+    #tab-modo-pin.modo-oculto {
+      display: none !important;
+    }
+
 </style>
 </head>
-<body>
+<body class="nao-autenticado">
 
   <!-- SIDEBAR DO ERP -->
   <aside class="erp-sidebar" id="erp-sidebar">
@@ -23954,8 +23984,8 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
     </div>
   </div>
 
-    <!-- OVERLAY / TELA DE LOGIN OBRIGATÓRIA -->
-  <div id="modal-auth-login" style="display: none; position: fixed; inset: 0; background: rgba(5, 8, 15, 0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 999999; align-items: center; justify-content: center; padding: 20px;">
+    <!-- OVERLAY / TELA DE LOGIN OBRIGATÓRIA (100% OPACA - ZERO VAZAMENTO DO SISTEMA) -->
+  <div id="modal-auth-login" style="display: flex; position: fixed; inset: 0; background: #070d18; z-index: 9999999; align-items: center; justify-content: center; padding: 20px;">
     <div style="background: #0b1120; border: 1px solid rgba(0, 212, 255, 0.35); box-shadow: 0 0 50px rgba(0, 212, 255, 0.15), 0 20px 40px rgba(0, 0, 0, 0.6); border-radius: 16px; width: 100%; max-width: 440px; overflow: hidden; animation: zoomIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
       
       <!-- Cabeçalho do Login -->
@@ -23999,12 +24029,12 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
           </button>
         </div>
 
-        <!-- SELETOR RÁPIDO DE MODO DE ENTRADA (SENHA OU PIN) -->
-        <div style="display: flex; gap: 8px; margin-bottom: 16px; background: rgba(0, 0, 0, 0.4); padding: 4px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <button type="button" id="tab-modo-senha" onclick="alternarModoEntrada('simples')" style="flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 700; border-radius: 7px; border: 1px solid rgba(56, 189, 248, 0.4); cursor: pointer; transition: 0.2s; background: rgba(2, 132, 199, 0.25); color: #38bdf8;">
-            🔤 Senha (admin123)
+        <!-- SELETOR RÁPIDO DE MODO DE ENTRADA (OCULTO POR PADRÃO - EXIBIDO APENAS SE SENHA FOR RESETADA PELO ADMIN) -->
+        <div id="auth-seletor-modo-container" style="display: none !important; gap: 8px; margin-bottom: 16px; background: rgba(0, 0, 0, 0.4); padding: 4px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <button type="button" id="tab-modo-senha" class="modo-oculto" onclick="alternarModoEntrada('simples')" style="display: none !important; flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 700; border-radius: 7px; border: 1px solid rgba(56, 189, 248, 0.4); cursor: pointer; transition: 0.2s; background: rgba(2, 132, 199, 0.25); color: #38bdf8;">
+            🔤 Senha de Acesso
           </button>
-          <button type="button" id="tab-modo-pin" onclick="alternarModoEntrada('pin')" style="flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 700; border-radius: 7px; border: 1px solid transparent; cursor: pointer; transition: 0.2s; background: transparent; color: #94a3b8;">
+          <button type="button" id="tab-modo-pin" class="modo-oculto" onclick="alternarModoEntrada('pin')" style="display: none !important; flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 700; border-radius: 7px; border: 1px solid transparent; cursor: pointer; transition: 0.2s; background: transparent; color: #94a3b8;">
             🔢 PIN (4-6 Dígitos)
           </button>
         </div>
@@ -25551,6 +25581,7 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
     }
 
     function gravarTokenAtivo(token, user) {
+      sessionStorage.setItem('erp_janela_autenticada', '1');
       const cfg = obterConfigSeguranca();
       const userJson = JSON.stringify(user);
       sessaoCookieAtiva = true;
@@ -25562,7 +25593,10 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
             nome: user.nome || user.login,
             papel: user.papel || '',
             papelNome: user.papelNome || user.papel || 'Operador',
-            papelCor: user.papelCor || '#38bdf8'
+            papelCor: user.papelCor || '#38bdf8',
+            tipoCredencial: user.tipoCredencial || (user.login === 'gustavo' ? 'pin' : 'simples'),
+            tamanhoPin: user.tamanhoPin || (user.login === 'gustavo' ? 4 : 6),
+            exigirTrocaSenha: !!user.exigirTrocaSenha
           }));
         } catch (e) { console.warn('Erro ao memorizar operador:', e); }
       }
@@ -25583,6 +25617,7 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
     function limparSessaoAtiva() {
       sessaoCookieAtiva = false;
       csrfTokenSessao = null;
+      sessionStorage.removeItem('erp_janela_autenticada');
       sessionStorage.removeItem('missuenos_token');
       sessionStorage.removeItem('missuenos_user');
       localStorage.removeItem('missuenos_token');
@@ -25620,6 +25655,14 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
     // Monitora atividade do operador nos eventos de uso
     ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
       window.addEventListener(evt, () => renovarTimeoutInatividade(), { passive: true });
+    });
+
+    // Garantia absoluta: ao fechar a janela/aba (X, Alt+F4 ou sair), destrói a marcação da sessão desta janela
+    window.addEventListener('beforeunload', () => {
+      try { sessionStorage.removeItem('erp_janela_autenticada'); } catch {}
+    });
+    window.addEventListener('pagehide', () => {
+      try { sessionStorage.removeItem('erp_janela_autenticada'); } catch {}
     });
 
     // Verificação periódica em segundo plano a cada 15 segundos
@@ -25697,7 +25740,17 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
 
     function wizardSalvarConfiguracoes() {
       salvarConfigSeguranca(wizardTempSessao, wizardTempSenha);
+      try {
+        let opSalvo = null;
+        const raw = localStorage.getItem('missuenos_terminal_operador');
+        if (raw) opSalvo = JSON.parse(raw);
+        if (opSalvo) {
+          opSalvo.tipoCredencial = wizardTempSenha;
+          localStorage.setItem('missuenos_terminal_operador', JSON.stringify(opSalvo));
+        }
+      } catch (e) {}
       fecharWizardSeguranca();
+      adaptarInterfaceLogin();
       if (typeof exibirToast === 'function') {
         exibirToast('Diretrizes de segurança aplicadas com sucesso neste terminal!', 'sucesso');
       }
@@ -25758,6 +25811,7 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
       const badge = document.getElementById('auth-badge-politica');
       const blocoPin = document.getElementById('auth-bloco-pin');
       const blocoSenha = document.getElementById('auth-bloco-senha');
+      const seletorModo = document.getElementById('auth-seletor-modo-container');
       const blocoLoginInput = document.getElementById('auth-bloco-login-input');
       const cardOperadorSalvo = document.getElementById('auth-card-operador-salvo');
       const blocoForca = document.getElementById('auth-bloco-forca-senha');
@@ -25766,15 +25820,6 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
       const tabPin = document.getElementById('tab-modo-pin');
       const loginInput = document.getElementById('auth-login-input');
 
-      // Atualiza badge no topo do modal
-      if (badge) {
-        const timeoutMin = obterTimeoutInatividadeMinutos();
-        let txtSessao = cfg.sessao === 'fechou' ? '🔒 Fecha = Exige Senha' : '⚡ Permanente';
-        let txtTimeout = timeoutMin === 0 ? '' : ` • ⏱️ Timeout ${timeoutMin}m`;
-        let txtSenha = cfg.tipoSenha === 'pin' ? '🔢 PIN 4-6 Dígitos' : (cfg.tipoSenha === 'simples' ? '🔤 Senha admin123' : '🔐 Senha Forte');
-        badge.textContent = `${txtSessao}${txtTimeout} • ${txtSenha}`;
-      }
-
       // Verifica se há operador memorizado neste terminal
       let opSalvo = null;
       try {
@@ -25782,6 +25827,31 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
         if (raw) opSalvo = JSON.parse(raw);
       } catch (e) {
         opSalvo = null;
+      }
+
+      // REGRA MESTRA:
+      // O seletor de alternância e o botão "Senha de Acesso" NUNCA devem aparecer quando a senha é PIN.
+      // Cada operador opera exclusivamente na modalidade definida.
+      if (seletorModo) {
+        seletorModo.style.setProperty('display', 'none', 'important');
+      }
+      if (tabSenha) {
+        tabSenha.style.setProperty('display', 'none', 'important');
+      }
+      if (tabPin) {
+        tabPin.style.setProperty('display', 'none', 'important');
+      }
+
+      // Determina o formato de credencial ativo (Prioridade: operador memorizado > configuração do terminal)
+      const tipoAtivo = (opSalvo && opSalvo.tipoCredencial) ? opSalvo.tipoCredencial : (cfg.tipoSenha || 'pin');
+
+      // Atualiza badge no topo do modal
+      if (badge) {
+        const timeoutMin = obterTimeoutInatividadeMinutos();
+        let txtSessao = cfg.sessao === 'fechou' ? '🔒 Fecha = Exige Senha' : '⚡ Permanente';
+        let txtTimeout = timeoutMin === 0 ? '' : ` • ⏱️ Timeout ${timeoutMin}m`;
+        let txtSenha = tipoAtivo === 'pin' ? '🔢 PIN 4-6 Dígitos' : (tipoAtivo === 'simples' ? '🔤 Senha de Acesso' : '🔐 Senha Forte');
+        badge.textContent = `${txtSessao}${txtTimeout} • ${txtSenha}`;
       }
 
       if (opSalvo && opSalvo.login) {
@@ -25813,21 +25883,20 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
         if (blocoLoginInput) blocoLoginInput.style.display = 'block';
       }
 
-      // Alternância entre PIN e Senha
-      if (cfg.tipoSenha === 'pin') {
-        if (tabPin) {
-          tabPin.style.background = 'rgba(2, 132, 199, 0.25)';
-          tabPin.style.color = '#38bdf8';
-          tabPin.style.borderColor = 'rgba(56, 189, 248, 0.4)';
-        }
-        if (tabSenha) {
-          tabSenha.style.background = 'transparent';
-          tabSenha.style.color = '#94a3b8';
-          tabSenha.style.borderColor = 'transparent';
-        }
+      // Renderização EXCLUSIVA da modalidade definida (Não exibe nenhuma outra forma)
+      if (tipoAtivo === 'pin') {
+        if (tabSenha) tabSenha.style.setProperty('display', 'none', 'important');
+        if (tabPin) tabPin.style.setProperty('display', 'none', 'important');
+        if (seletorModo) seletorModo.style.setProperty('display', 'none', 'important');
+
         if (blocoPin) blocoPin.style.display = 'block';
         if (blocoSenha) blocoSenha.style.display = 'none';
         limparPinInputs();
+
+        const tamPin = (opSalvo && opSalvo.tamanhoPin) ? opSalvo.tamanhoPin : ((opSalvo?.login === 'gustavo') ? 4 : 6);
+        if (tamanhoPinAtual !== tamPin) {
+          renderizarCaixasPin(tamPin);
+        }
 
         setTimeout(() => {
           if (opSalvo && opSalvo.login) {
@@ -25837,30 +25906,24 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
           }
         }, 120);
       } else {
-        if (tabSenha) {
-          tabSenha.style.background = 'rgba(2, 132, 199, 0.25)';
-          tabSenha.style.color = '#38bdf8';
-          tabSenha.style.borderColor = 'rgba(56, 189, 248, 0.4)';
-        }
-        if (tabPin) {
-          tabPin.style.background = 'transparent';
-          tabPin.style.color = '#94a3b8';
-          tabPin.style.borderColor = 'transparent';
-        }
+        if (tabSenha) tabSenha.style.setProperty('display', 'none', 'important');
+        if (tabPin) tabPin.style.setProperty('display', 'none', 'important');
+        if (seletorModo) seletorModo.style.setProperty('display', 'none', 'important');
+
         if (blocoPin) blocoPin.style.display = 'none';
         if (blocoSenha) blocoSenha.style.display = 'block';
 
         const senhaInp = document.getElementById('auth-senha-input');
         if (senhaInp) {
-          senhaInp.placeholder = 'Digite admin123 ou sua senha';
+          senhaInp.placeholder = 'Digite sua senha de acesso';
         }
 
-        if (cfg.tipoSenha === 'forte') {
+        if (tipoAtivo === 'forte') {
           if (blocoForca) blocoForca.style.display = 'block';
           if (labelSenha) labelSenha.textContent = 'Senha Forte Corporativa (@#$%!)';
         } else {
           if (blocoForca) blocoForca.style.display = 'none';
-          if (labelSenha) labelSenha.textContent = 'Senha Padrão (admin123)';
+          if (labelSenha) labelSenha.textContent = 'Senha de Acesso';
         }
 
         setTimeout(() => {
@@ -25954,14 +26017,52 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
       configurarEventosPin();
     }
 
-    function consultarTamanhoPinOperador() {
-      if (tamanhoPinAtual !== 6) renderizarCaixasPin(6);
+    async function consultarTamanhoPinOperador(loginDigitado) {
+      let login = String(loginDigitado || document.getElementById('auth-login-input')?.value || '').trim().toLowerCase();
+      if (!login) {
+        try {
+          const raw = localStorage.getItem('missuenos_terminal_operador');
+          if (raw) login = String(JSON.parse(raw)?.login || '').trim().toLowerCase();
+        } catch (e) {}
+      }
+      if (!login) return;
+
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ acao: 'consultar_operador', login })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          const opInfo = {
+            login: data.login,
+            nome: data.nome,
+            papel: data.papel,
+            papelNome: data.papelNome,
+            papelCor: data.papelCor,
+            tipoCredencial: data.tipoCredencial || (data.login === 'gustavo' ? 'pin' : 'simples'),
+            tamanhoPin: data.tamanhoPin || (data.login === 'gustavo' ? 4 : 6),
+            exigirTrocaSenha: !!data.exigirTrocaSenha
+          };
+          localStorage.setItem('missuenos_terminal_operador', JSON.stringify(opInfo));
+          adaptarInterfaceLogin();
+        }
+      } catch (e) {
+        const metaTamanho = (login === 'gustavo') ? 4 : 6;
+        if (tamanhoPinAtual !== metaTamanho) renderizarCaixasPin(metaTamanho);
+      }
     }
 
     let timerDebounceLoginOp = null;
-    function aoDigitarLoginOperadorDebounced() {}
+    function aoDigitarLoginOperadorDebounced(val) {
+      clearTimeout(timerDebounceLoginOp);
+      timerDebounceLoginOp = setTimeout(() => {
+        consultarTamanhoPinOperador(val);
+      }, 100);
+    }
 
-    function aoSairLoginOperador() { consultarTamanhoPinOperador(); }
+    function aoSairLoginOperador(val) { consultarTamanhoPinOperador(val); }
 
     function obterPinCompleto() {
       let pin = '';
@@ -27001,10 +27102,42 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
 
       sessaoCookieAtiva = false;
       usuarioLogado = null;
+
+      // POLÍTICA UNIVERSAL: Fechou o ERP (no X, Alt+F4 ou fechar processo) = Exige Senha/PIN ao Abrir Novamente
+      // 1. Detecta se a navegação é estritamente um reload (F5) dentro da mesma janela já autenticada
+      let ehReloadF5 = false;
+      try {
+        const navEntries = window.performance?.getEntriesByType?.('navigation');
+        if (navEntries && navEntries.length > 0) {
+          ehReloadF5 = navEntries[0].type === 'reload';
+        } else if (window.performance?.navigation) {
+          ehReloadF5 = window.performance.navigation.type === 1; // TYPE_RELOAD
+        }
+      } catch {}
+
+      const janelaAutenticada = sessionStorage.getItem('erp_janela_autenticada');
+
+      // Se NÃO for um recarregamento (F5) em janela que já estava autenticada,
+      // qualquer abertura do sistema (inicial, nova janela ou após fechar no X) DEVE exigir senha/PIN!
+      if (!ehReloadF5 || janelaAutenticada !== '1') {
+        sessionStorage.clear();
+        limparSessaoAtiva();
+        try {
+          await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ acao: 'logout' })
+          });
+        } catch {}
+        exibirTelaLogin();
+        return;
+      }
+
       try {
         const res = await fetch('/api/auth', { cache: 'no-store' });
         const data = await res.json();
         if (!res.ok || !data.autenticado || !data.usuario) {
+          sessionStorage.clear();
           limparSessaoAtiva();
           exibirTelaLogin();
           return;
@@ -27021,6 +27154,7 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
         aplicarPerfilUsuario(usuarioLogado);
         ocultarTelaLogin();
       } catch (erro) {
+        sessionStorage.clear();
         limparSessaoAtiva();
         usuarioLogado = null;
         exibirTelaLogin();
@@ -27028,6 +27162,7 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
     }
 
     function exibirTelaLogin() {
+      document.body.classList.add('nao-autenticado');
       const modal = document.getElementById('modal-auth-login');
       if (modal) {
         modal.style.display = 'flex';
@@ -27043,6 +27178,7 @@ function projetarFluxoCaixa(pedidos = [], financeiro = [], opcoes = {}) {
     }
 
     function ocultarTelaLogin() {
+      document.body.classList.remove('nao-autenticado');
       const modal = document.getElementById('modal-auth-login');
       if (modal) modal.style.display = 'none';
       limparPinInputs();
